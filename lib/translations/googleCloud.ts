@@ -1,10 +1,11 @@
-import { Translate } from '@google-cloud/translate/build/src'
+import { v2 } from '@google-cloud/translate'
+const { Translate } = v2
 import { getCachedTranslation, setCachedTranslation } from './cache'
 import { LanguageCode } from './config'
 
-let translateClient: Translate | null = null
+let translateClient: v2.Translate | null = null
 
-function getTranslateClient(): Translate {
+function getTranslateClient(): v2.Translate {
   if (!translateClient) {
     translateClient = new Translate({
       projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
