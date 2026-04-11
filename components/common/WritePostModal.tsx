@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import { useTranslation } from 'react-i18next';
+import '@/lib/i18n';
+
+const TITLE_MAX = 30;
+const CONTENT_MAX = 200;
 
 const CATEGORY_OPTIONS = [
   { label: 'Food', value: 'food' },
@@ -18,6 +23,7 @@ interface WritePostModalProps {
 }
 
 export default function WritePostModal({ isOpen, onClose, onRequireLogin }: WritePostModalProps) {
+  const { t } = useTranslation('common');
   const [category, setCategory] = useState('');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -43,7 +49,15 @@ export default function WritePostModal({ isOpen, onClose, onRequireLogin }: Writ
     e.preventDefault();
     setError('');
     if (!category || !title || !content) {
-      setError('Please fill all required fields.');
+      setError(t('writePost.fillRequired'));
+      return;
+    }
+    if (title.length > TITLE_MAX) {
+      setError(t('writePost.titleTooLong'));
+      return;
+    }
+    if (content.length > CONTENT_MAX) {
+      setError(t('writePost.contentTooLong'));
       return;
     }
     setLoading(true);
@@ -78,7 +92,7 @@ export default function WritePostModal({ isOpen, onClose, onRequireLogin }: Writ
       }
     }
 
-    const { error: postError } = await supabase
+    const { data: postData, error: postError } = await supabase
       .from('post')
       .insert({
         author_id: userId,
@@ -88,12 +102,22 @@ export default function WritePostModal({ isOpen, onClose, onRequireLogin }: Writ
         region: 'seoul',
         language: uselanguage,
         image_url: imageUrls.length > 0 ? imageUrls : null,
-      });
+      })
+      .select('id')
+      .single();
 
     if (postError) {
-      setError('Failed to save post.');
+      setError(t('writePost.failed'));
       setLoading(false);
       return;
+    }
+
+    if (postData?.id) {
+      fetch('/api/post/index', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ postId: postData.id }),
+      }).catch(console.error);
     }
 
     setLoading(false);
@@ -112,13 +136,13 @@ export default function WritePostModal({ isOpen, onClose, onRequireLogin }: Writ
       <div className="bg-white rounded-2xl max-w-lg w-full p-6 relative max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Write a Post</h2>
+          <h2 className="text-xl font-bold">{t('writePost.title')}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl" disabled={loading}>✕</button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Category */}
           <div>
-            <label className="block text-sm font-semibold mb-2">Category</label>
+            <label className="block text-sm font-semibold mb-2">{t('writePost.category')}</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
@@ -126,7 +150,7 @@ export default function WritePostModal({ isOpen, onClose, onRequireLogin }: Writ
               required
               disabled={loading}
             >
-              <option value="">Select a category</option>
+              <option value="">{t('writePost.categoryPlaceholder')}</option>
               {CATEGORY_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
@@ -134,35 +158,49 @@ export default function WritePostModal({ isOpen, onClose, onRequireLogin }: Writ
           </div>
           {/* Title */}
           <div>
-            <label className="block text-sm font-semibold mb-2">Title</label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-semibold">{t('writePost.postTitle')}</label>
+              <span className={`text-xs ${title.length > TITLE_MAX ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+                {title.length}/{TITLE_MAX}
+              </span>
+            </div>
             <input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter a title"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9DB8A0]"
+              onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX))}
+              placeholder={t('writePost.titlePlaceholder')}
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9DB8A0] ${
+                title.length >= TITLE_MAX ? 'border-red-400' : 'border-gray-300'
+              }`}
               required
               disabled={loading}
             />
           </div>
           {/* Content */}
           <div>
-            <label className="block text-sm font-semibold mb-2">Content</label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-semibold">{t('writePost.content')}</label>
+              <span className={`text-xs ${content.length >= CONTENT_MAX ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+                {content.length}/{CONTENT_MAX}
+              </span>
+            </div>
             <textarea
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Write your post..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9DB8A0] min-h-[120px]"
+              onChange={(e) => setContent(e.target.value.slice(0, CONTENT_MAX))}
+              placeholder={t('writePost.contentPlaceholder')}
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9DB8A0] min-h-[120px] ${
+                content.length >= CONTENT_MAX ? 'border-red-400' : 'border-gray-300'
+              }`}
               required
               disabled={loading}
             />
           </div>
           {/* Images */}
           <div>
-            <label className="block text-sm font-semibold mb-2">Photo (optional)</label>
+            <label className="block text-sm font-semibold mb-2">{t('writePost.photo')}</label>
             <label className="flex items-center gap-2 cursor-pointer w-fit">
               <span className="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm text-gray-600 transition">
-                📷 Upload Image {images.length > 0 && `(${images.length}/3)`}
+                {t('writePost.uploadImage')} {images.length > 0 && `(${images.length}/3)`}
               </span>
               <input
                 type="file"
@@ -198,7 +236,7 @@ export default function WritePostModal({ isOpen, onClose, onRequireLogin }: Writ
             className="w-full bg-[#9DB8A0] text-white py-3 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 mt-2"
             disabled={loading}
           >
-            {loading ? 'Saving...' : 'Submit'}
+            {loading ? t('writePost.saving') : t('writePost.submit')}
           </button>
         </form>
       </div>

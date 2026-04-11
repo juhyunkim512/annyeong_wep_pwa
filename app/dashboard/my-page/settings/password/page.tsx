@@ -3,9 +3,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
+import '@/lib/i18n';
 
 export default function PasswordSettingsPage() {
   const router = useRouter();
+  const { t } = useTranslation('common');
   const [email, setEmail] = useState('');
 
   // Step 1: verify current password
@@ -33,13 +36,13 @@ export default function PasswordSettingsPage() {
   // Re-authenticate with current password to verify identity
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentPw) { setVerifyError('Please enter your current password.'); return; }
+    if (!currentPw) { setVerifyError(t('settings.passwordRequired')); return; }
     setVerifyLoading(true);
     setVerifyError('');
     const { error } = await supabase.auth.signInWithPassword({ email, password: currentPw });
     setVerifyLoading(false);
     if (error) {
-      setVerifyError('Current password is incorrect.');
+      setVerifyError(t('settings.incorrectPassword'));
     } else {
       setVerified(true);
     }
@@ -49,14 +52,14 @@ export default function PasswordSettingsPage() {
     e.preventDefault();
     setUpdateError('');
     setUpdateMsg('');
-    if (next !== confirm) { setUpdateError('Passwords do not match.'); return; }
+    if (next !== confirm) { setUpdateError(t('settings.passwordMismatch')); return; }
     setUpdateLoading(true);
     const { error } = await supabase.auth.updateUser({ password: next });
     setUpdateLoading(false);
     if (error) {
       setUpdateError(error.message);
     } else {
-      setUpdateMsg('Password updated successfully!');
+      setUpdateMsg(t('settings.passwordUpdated'));
       setNext('');
       setConfirm('');
       setVerified(false);
@@ -69,7 +72,7 @@ export default function PasswordSettingsPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-800 transition text-xl">‹</button>
-        <h1 className="text-3xl font-bold">reset password</h1>
+        <h1 className="text-3xl font-bold">{t('settings.resetPasswordTitle')}</h1>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6">
@@ -83,10 +86,10 @@ export default function PasswordSettingsPage() {
         {/* Step 1 — Current Password */}
         <form onSubmit={handleVerify} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Current Password</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t('settings.currentPassword')}</label>
             <input
               type="password"
-              placeholder="Enter your current password"
+              placeholder={t('settings.currentPasswordPlaceholder')}
               value={currentPw}
               onChange={(e) => { setCurrentPw(e.target.value); setVerifyError(''); }}
               disabled={verified}
@@ -97,7 +100,7 @@ export default function PasswordSettingsPage() {
               }`}
             />
             {verifyError && <p className="text-red-500 text-xs mt-1.5">{verifyError}</p>}
-            {verified && <p className="text-green-600 text-xs mt-1.5 font-medium">✓ Password verified</p>}
+            {verified && <p className="text-green-600 text-xs mt-1.5 font-medium">{t('settings.verified')}</p>}
           </div>
           {!verified && (
             <button
@@ -105,7 +108,7 @@ export default function PasswordSettingsPage() {
               disabled={verifyLoading || !currentPw}
               className="w-full bg-gray-700 text-white py-2.5 rounded-lg font-semibold hover:opacity-90 disabled:opacity-40 transition text-sm"
             >
-              {verifyLoading ? 'Verifying...' : 'Verify'}
+              {verifyLoading ? t('settings.verifying') : t('settings.verifyBtn')}
             </button>
           )}
         </form>
@@ -113,23 +116,23 @@ export default function PasswordSettingsPage() {
         {/* Step 2 — New Password (shown only after verification) */}
         {verified && (
           <form onSubmit={handleUpdate} className="space-y-4 border-t border-gray-100 pt-6">
-            <p className="text-sm text-gray-500">Enter your new password below.</p>
+            <p className="text-sm text-gray-500">{t('settings.enterNewPasswordBelow')}</p>
             {updateError && <p className="text-red-500 text-sm">{updateError}</p>}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">New Password</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t('settings.newPassword')}</label>
               <input
                 type="password"
-                placeholder="At least 6 characters"
+                placeholder={t('settings.newPasswordPlaceholder')}
                 value={next}
                 onChange={(e) => setNext(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#9DB8A0]"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Confirm New Password</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t('settings.confirmNewPassword')}</label>
               <input
                 type="password"
-                placeholder="Re-enter new password"
+                placeholder={t('settings.confirmNewPasswordPlaceholder')}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#9DB8A0]"
@@ -140,7 +143,7 @@ export default function PasswordSettingsPage() {
               disabled={updateLoading}
               className="w-full bg-[#9DB8A0] text-white py-3 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition"
             >
-              {updateLoading ? 'Updating...' : 'Update Password'}
+              {updateLoading ? t('settings.updating') : t('settings.updatePassword')}
             </button>
           </form>
         )}

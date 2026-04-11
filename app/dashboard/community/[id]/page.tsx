@@ -5,12 +5,54 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import LoginModal from "@/components/common/LoginModal";
 import AvatarImage from "@/components/common/AvatarImage";
+import UserProfileModal from "@/components/common/UserProfileModal";
+import ReportModal from "@/components/common/ReportModal";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
+
+// ── 클라이언트 측 언어 정규화 (서버 LANG_MAP 과 동일) ──────────────
+const LANG_MAP: Record<string, string> = {
+  english: 'en', korean: 'ko', japanese: 'ja',
+  chinese: 'zh', spanish: 'es', vietnamese: 'vi',
+  en: 'en', ko: 'ko', ja: 'ja', zh: 'zh', es: 'es', vi: 'vi',
+  'zh-cn': 'zh', 'zh-tw': 'zh', 'zh-hant': 'zh', 'zh-hans': 'zh',
+};
+function normalizeLang(v?: string | null): string {
+  if (!v) return 'en';
+  return LANG_MAP[v.toLowerCase().trim()] ?? 'en';
+}
+
+// ── /api/translate 호출 헬퍼 (모듈 레벨) ─────────────────────────
+async function callTranslate(
+  contentType: 'post' | 'comment',
+  contentId: string,
+  fieldName: 'title' | 'content',
+  sourceText: string,
+  sourceLanguage: string,
+  accessToken: string,
+  signal: AbortSignal,
+): Promise<{ text: string; isTranslated: boolean }> {
+  try {
+    const res = await fetch('/api/translate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ contentType, contentId, fieldName, sourceText, sourceLanguage }),
+      signal,
+    });
+    if (!res.ok) return { text: sourceText, isTranslated: false };
+    return await res.json();
+  } catch {
+    return { text: sourceText, isTranslated: false };
+  }
+}
 
 const FLAG_EMOJI_MAP: { [key: string]: string } = {
   korea: "🇰🇷",
   usa: "🇺🇸",
-  jpan: "🇯🇵",
+  japan: "🇯🇵",
   china: "🇨🇳",
   vietnam: "🇻🇳",
   spain: "🇪🇸",
@@ -40,6 +82,7 @@ interface Comment {
   post_id: string;
   author_id: string;
   content: string;
+  language?: string;          // 댓글 작성자의 언어 (번역 sourceLanguage 에 사용)
   created_at: string;
   image_url?: string;
   nickname?: string;
@@ -50,6 +93,17 @@ interface Comment {
 
 export default function PostDetailPage() {
   const params = useParams();
+  const { t } = useTranslation('common');
+  const timeAgo = (dateStr: string) => {
+    const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+    if (diff < 60) return t('common.justNow');
+    if (diff < 3600) return t('common.minutesAgo', { count: Math.floor(diff / 60) });
+    if (diff < 86400) return t('common.hoursAgo', { count: Math.floor(diff / 3600) });
+    if (diff < 86400 * 7) return t('common.daysAgo', { count: Math.floor(diff / 86400) });
+    if (diff < 86400 * 30) return t('common.weeksAgo', { count: Math.floor(diff / (86400 * 7)) });
+    if (diff < 86400 * 365) return t('common.monthsAgo', { count: Math.floor(diff / (86400 * 30)) });
+    return t('common.yearsAgo', { count: Math.floor(diff / (86400 * 365)) });
+  };
   const postId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : "";
   const [post, setPost] = useState<Post | null>(null);
   const [author, setAuthor] = useState<Profile | null>(null);
@@ -76,74 +130,160 @@ export default function PostDetailPage() {
   const [postLiked, setPostLiked] = useState(false);
   const [postLikeLoading, setPostLikeLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [profileModalUserId, setProfileModalUserId] = useState<string | null>(null);
+  const [reportTarget, setReportTarget] = useState<{ type: 'post' | 'comment'; id: string } | null>(null);
+
+  // ── 번역 상태 ──────────────────────────────────────────────────────
+  const [translatedPost, setTranslatedPost] = useState<{
+    title: string; titleIsTranslated: boolean;
+    content: string; contentIsTranslated: boolean;
+  } | null>(null);
+  const [translatedComments, setTranslatedComments] = useState<
+    Record<string, { text: string; isTranslated: boolean }>
+  >({});
+  // 원문/번역 토글 상태
+  const [showOriginalPost, setShowOriginalPost] = useState(false);
+  const [showOriginalComments, setShowOriginalComments] = useState<Record<string, boolean>>({});
 
   // fetch post, author, comments, likes
   useEffect(() => {
+    const controller = new AbortController();
     const fetchData = async () => {
       setLoading(true);
       setError("");
-      const { data: sessionData } = await supabase.auth.getSession();
-      setIsLoggedIn(!!sessionData.session);
-      setCurrentUserId(sessionData.session?.user.id ?? null);
-      // post fetch
-      const { data: postData, error: postError } = await supabase
-        .from("post")
-        .select("*")
-        .eq("id", postId)
-        .maybeSingle();
-      if (postError || !postData) {
-        setError("Post not found");
-        setPost(null);
-        setLoading(false);
-        return;
-      }
-      setPost(postData);
-      // post_like 여부
-      if (sessionData.session) {
-        const { data: likeRow } = await supabase
-          .from("post_like")
-          .select("id")
-          .eq("user_id", sessionData.session.user.id)
-          .eq("post_id", postId)
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (controller.signal.aborted) return;
+        setIsLoggedIn(!!sessionData.session);
+        setCurrentUserId(sessionData.session?.user.id ?? null);
+        // post fetch
+        const { data: postData, error: postError } = await supabase
+          .from("post")
+          .select("*")
+          .eq("id", postId)
           .maybeSingle();
-        setPostLiked(!!likeRow);
+        if (controller.signal.aborted) return;
+        if (postError || !postData) {
+          setError("Post not found");
+          setPost(null);
+          return;
+        }
+        setPost(postData);
+        // post_like 여부
+        if (sessionData.session) {
+          const { data: likeRow } = await supabase
+            .from("post_like")
+            .select("id")
+            .eq("user_id", sessionData.session.user.id)
+            .eq("post_id", postId)
+            .maybeSingle();
+          if (!controller.signal.aborted) setPostLiked(!!likeRow);
+        }
+        // author fetch
+        const { data: authorProfile } = await supabase
+          .from("profile")
+          .select("nickname, flag, image_url")
+          .eq("id", postData.author_id)
+          .maybeSingle();
+        if (controller.signal.aborted) return;
+        setAuthor(authorProfile);
+        // comments fetch
+        const { data: commentData } = await supabase
+          .from("comment")
+          .select("*, profile(nickname, flag, image_url)")
+          .eq("post_id", postId)
+          .order("created_at", { ascending: true });
+        if (controller.signal.aborted) return;
+        // flatten profile join
+        const commentsWithProfile = (commentData || []).map((c: any) => ({
+          ...c,
+          nickname: c.profile?.nickname,
+          flag: c.profile?.flag,
+          profile_image_url: c.profile?.image_url,
+        }));
+        setComments(commentsWithProfile);
+        // comment likes fetch
+        if (sessionData.session) {
+          const userId = sessionData.session.user.id;
+          const { data: likeRows } = await supabase
+            .from("comment_like")
+            .select("comment_id")
+            .eq("user_id", userId);
+          if (!controller.signal.aborted) {
+            const likeMap: { [commentId: string]: boolean } = {};
+            (likeRows || []).forEach((row: any) => { likeMap[row.comment_id] = true; });
+            setCommentLikes(likeMap);
+          }
+        }
+
+        // ── 번역 처리 ────────────────────────────────────────────────
+        // 로그인 사용자의 언어가 게시글 원문 언어와 다를 때만 호출
+        if (sessionData.session) {
+          const { data: userProfile } = await supabase
+            .from('profile')
+            .select('uselanguage')
+            .eq('id', sessionData.session.user.id)
+            .maybeSingle();
+
+          if (!controller.signal.aborted) {
+            const userLangCode = normalizeLang(userProfile?.uselanguage);
+            const postLangCode = normalizeLang(postData.language);
+
+            const accessToken = sessionData.session.access_token;
+
+            if (userLangCode !== postLangCode) {
+              // post title + content 병렬 번역
+              const [titleRes, contentRes] = await Promise.all([
+                callTranslate('post', postData.id, 'title', postData.title, postData.language, accessToken, controller.signal),
+                callTranslate('post', postData.id, 'content', postData.content, postData.language, accessToken, controller.signal),
+              ]);
+              if (!controller.signal.aborted) {
+                setTranslatedPost({
+                  title: titleRes.isTranslated ? titleRes.text : postData.title,
+                  titleIsTranslated: titleRes.isTranslated,
+                  content: contentRes.isTranslated ? contentRes.text : postData.content,
+                  contentIsTranslated: contentRes.isTranslated,
+                });
+              }
+
+              // 댓글 병렬 번역
+              // sourceLanguage: 댓글 자체의 language 컬럼을 우선 사용, 없으면 post.language 로 fallback
+              if (commentsWithProfile.length > 0) {
+                const commentResults = await Promise.all(
+                  commentsWithProfile.map((c) =>
+                    callTranslate(
+                      'comment', c.id, 'content', c.content,
+                      c.language ?? postData.language,   // comment.language 우선
+                      accessToken,
+                      controller.signal,
+                    )
+                  )
+                );
+                if (!controller.signal.aborted) {
+                  const cMap: Record<string, { text: string; isTranslated: boolean }> = {};
+                  commentsWithProfile.forEach((c, i) => {
+                    cMap[c.id] = {
+                      text: commentResults[i].isTranslated ? commentResults[i].text : c.content,
+                      isTranslated: commentResults[i].isTranslated,
+                    };
+                  });
+                  setTranslatedComments(cMap);
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        if ((err as any)?.name === 'AbortError') return;
+        console.error("[PostDetail] fetchData exception:", err);
+        setError("Failed to load post");
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
-      // author fetch
-      const { data: authorProfile } = await supabase
-        .from("profile")
-        .select("nickname, flag, image_url")
-        .eq("id", postData.author_id)
-        .maybeSingle();
-      setAuthor(authorProfile);
-      // comments fetch
-      const { data: commentData } = await supabase
-        .from("comment")
-        .select("*, profile(nickname, flag, image_url)")
-        .eq("post_id", postId)
-        .order("created_at", { ascending: true });
-      // flatten profile join
-      const commentsWithProfile = (commentData || []).map((c: any) => ({
-        ...c,
-        nickname: c.profile?.nickname,
-        flag: c.profile?.flag,
-        profile_image_url: c.profile?.image_url,
-      }));
-      setComments(commentsWithProfile);
-      // comment likes fetch
-      if (sessionData.session) {
-        const userId = sessionData.session.user.id;
-        const { data: likeRows } = await supabase
-          .from("comment_like")
-          .select("comment_id")
-          .eq("user_id", userId);
-        const likeMap: { [commentId: string]: boolean } = {};
-        (likeRows || []).forEach((row: any) => { likeMap[row.comment_id] = true; });
-        setCommentLikes(likeMap);
-      }
-      setLoading(false);
     };
     fetchData();
-  }, [postId, isLoginOpen, commentVersion, postLikeLoading, deleteLoading]);
+    return () => controller.abort();
+  }, [postId, isLoginOpen, commentVersion]);
 
   // 댓글 작성
   const handleCommentSubmit = async (e: React.FormEvent) => {
@@ -233,26 +373,36 @@ export default function PostDetailPage() {
     }
   };
 
-  // 게시글 좋아요 토글
+  // 게시글 좋아요 토글 (optimistic update)
   const handlePostLike = async () => {
-    setPostLikeLoading(true);
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) {
       setIsLoginOpen(true);
-      setPostLikeLoading(false);
       return;
     }
-    if (postLiked) {
-      await supabase.from("post_like").delete().eq("user_id", sessionData.session.user.id).eq("post_id", postId);
-    } else {
-      await supabase.from("post_like").insert({ user_id: sessionData.session.user.id, post_id: postId });
+    const wasLiked = postLiked;
+    // Optimistic update: 즐시 UI 반영
+    setPostLiked(!wasLiked);
+    setPost((prev) => prev ? { ...prev, like_count: prev.like_count + (wasLiked ? -1 : 1) } : prev);
+    setPostLikeLoading(true);
+    try {
+      if (wasLiked) {
+        await supabase.from("post_like").delete().eq("user_id", sessionData.session.user.id).eq("post_id", postId);
+      } else {
+        await supabase.from("post_like").insert({ user_id: sessionData.session.user.id, post_id: postId });
+      }
+    } catch {
+      // Rollback on error
+      setPostLiked(wasLiked);
+      setPost((prev) => prev ? { ...prev, like_count: prev.like_count + (wasLiked ? 1 : -1) } : prev);
+    } finally {
+      setPostLikeLoading(false);
     }
-    setPostLikeLoading(false);
   };
 
   // 게시글 삭제
   const handleDeletePost = async () => {
-    if (!window.confirm("정말 삭제하시겠습니까?")) return;
+    if (!window.confirm(t('community.deleteConfirm'))) return;
     setDeleteLoading(true);
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session || post?.author_id !== sessionData.session.user.id) {
@@ -275,7 +425,13 @@ export default function PostDetailPage() {
       .eq("id", postId);
     if (!error) {
       setPost((prev) => prev ? { ...prev, title: editPostTitle, content: editPostContent } : prev);
+      setTranslatedPost(null); // 수정 후 번역 캐시 클리어 (원문 표시)
       setEditingPost(false);
+      fetch('/api/post/index', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionData.session.access_token}` },
+        body: JSON.stringify({ postId }),
+      }).catch(console.error);
     }
   };
 
@@ -300,6 +456,12 @@ export default function PostDetailPage() {
       setComments((prev) =>
         prev.map((c) => (c.id === commentId ? { ...c, content: editText } : c))
       );
+      // 수정된 댓글 번역 캐시 클리어
+      setTranslatedComments((prev) => {
+        const next = { ...prev };
+        delete next[commentId];
+        return next;
+      });
       setEditingCommentId(null);
       setEditText("");
     }
@@ -310,12 +472,12 @@ export default function PostDetailPage() {
     return (
       <div className="max-w-2xl mx-auto mt-12">
         <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-          <h2 className="text-2xl font-bold mb-4">you have to need login</h2>
+          <h2 className="text-2xl font-bold mb-4">{t('auth.loginRequiredDesc')}</h2>
           <button
             className="bg-[#9DB8A0] text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90"
             onClick={() => setIsLoginOpen(true)}
           >
-            Login
+            {t('auth.login')}
           </button>
         </div>
         <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
@@ -326,17 +488,37 @@ export default function PostDetailPage() {
   return (
     <div className="max-w-2xl mx-auto mt-12">
       {loading ? (
-        <div className="text-center py-8 text-gray-400">Loading...</div>
+        <div className="text-center py-8 text-gray-400">{t('common.loading')}</div>
       ) : error ? (
         <div className="text-center py-8 text-red-500">{error}</div>
       ) : post ? (
         <div className="bg-white rounded-2xl border border-gray-200 p-8">
           {/* 작성자 닉네임+국기 + ... 메뉴 */}
           <div className="flex items-center gap-2 mb-2">
-            <AvatarImage src={author?.image_url} size={32} />
-            <span className="text-lg font-semibold text-[#000000]">{author?.nickname || "Unknown"}</span>
+            <button
+              type="button"
+              className="flex-shrink-0"
+              onClick={() => {
+                if (post?.author_id && post.author_id !== currentUserId) {
+                  setProfileModalUserId(post.author_id);
+                }
+              }}
+            >
+              <AvatarImage src={author?.image_url} size={32} />
+            </button>
+            <button
+              type="button"
+              className="text-lg font-semibold text-[#000000] hover:underline"
+              onClick={() => {
+                if (post?.author_id && post.author_id !== currentUserId) {
+                  setProfileModalUserId(post.author_id);
+                }
+              }}
+            >
+              {author?.nickname || "Unknown"}
+            </button>
             {author?.flag && <span className="text-xl">{getFlagEmoji(author.flag)}</span>}
-            {isLoggedIn && post?.author_id === currentUserId && (
+            {isLoggedIn && (
               <div className="relative ml-auto">
                 <button
                   className="text-gray-400 hover:text-gray-600 px-2 py-1 rounded text-base leading-none"
@@ -348,27 +530,41 @@ export default function PostDetailPage() {
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setPostMenuOpen(false)} />
                     <div className="absolute right-0 top-8 z-20 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden w-24">
-                      <button
-                        className="w-full text-center py-3 text-sm text-blue-500 hover:bg-gray-50 border-b border-gray-100"
-                        onClick={() => {
-                          setEditPostTitle(post.title);
-                          setEditPostContent(post.content);
-                          setEditingPost(true);
-                          setPostMenuOpen(false);
-                        }}
-                      >
-                        수정
-                      </button>
-                      <button
-                        className="w-full text-center py-3 text-sm text-red-500 hover:bg-gray-50"
-                        onClick={() => {
-                          handleDeletePost();
-                          setPostMenuOpen(false);
-                        }}
-                        disabled={deleteLoading}
-                      >
-                        삭제
-                      </button>
+                      {post?.author_id === currentUserId ? (
+                        <>
+                          <button
+                            className="w-full text-center py-3 text-sm text-blue-500 hover:bg-gray-50 border-b border-gray-100"
+                            onClick={() => {
+                              setEditPostTitle(post.title);
+                              setEditPostContent(post.content);
+                              setEditingPost(true);
+                              setPostMenuOpen(false);
+                            }}
+                          >
+                            {t('common.edit')}
+                          </button>
+                          <button
+                            className="w-full text-center py-3 text-sm text-red-500 hover:bg-gray-50"
+                            onClick={() => {
+                              handleDeletePost();
+                              setPostMenuOpen(false);
+                            }}
+                            disabled={deleteLoading}
+                          >
+                            {t('common.delete')}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          className="w-full text-center py-3 text-sm text-gray-600 hover:bg-gray-50"
+                          onClick={() => {
+                            setReportTarget({ type: 'post', id: postId });
+                            setPostMenuOpen(false);
+                          }}
+                        >
+                          {t('community.report')}
+                        </button>
+                      )}
                     </div>
                   </>
                 )}
@@ -394,20 +590,39 @@ export default function PostDetailPage() {
                   className="bg-[#9DB8A0] text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90"
                   onClick={handleEditPost}
                 >
-                  저장
+                  {t('common.save')}
                 </button>
                 <button
                   className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-200"
                   onClick={() => setEditingPost(false)}
                 >
-                  취소
+                  {t('common.cancel')}
                 </button>
               </div>
             </div>
           ) : (
             <>
-              <h1 className="text-2xl font-bold mb-2">{post.title}</h1>
-              <div className="text-gray-800 mb-4 whitespace-pre-line">{post.content}</div>
+              <h1 className="text-2xl font-bold mb-2">
+                {showOriginalPost || !translatedPost?.titleIsTranslated
+                  ? post.title
+                  : translatedPost!.title}
+              </h1>
+              {translatedPost?.titleIsTranslated && (
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs text-gray-400">🌐 {t('community.translated')}</span>
+                  <button
+                    className="text-xs text-[#9DB8A0] underline hover:opacity-80"
+                    onClick={() => setShowOriginalPost((v) => !v)}
+                  >
+                    {showOriginalPost ? t('community.viewTranslation') : t('community.viewOriginal')}
+                  </button>
+                </div>
+              )}
+              <div className="text-gray-800 mb-4 whitespace-pre-line">
+                {showOriginalPost || !translatedPost?.contentIsTranslated
+                  ? post.content
+                  : translatedPost!.content}
+              </div>
               {post.image_url && post.image_url.length > 0 && (
                 <div className="space-y-3 mb-6">
                   {post.image_url.map((url, idx) => (
@@ -418,7 +633,7 @@ export default function PostDetailPage() {
               )}
             </>
           )}
-          <div className="text-xs text-gray-400 mb-3">{new Date(post.created_at).toLocaleString()}</div>
+          <div className="text-xs text-gray-400 mb-3">{timeAgo(post.created_at)}</div>
           <div className="flex items-center gap-4 mb-6">
             <button
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold ${postLiked ? 'bg-[#9DB8A0] text-white' : 'bg-white text-[#9DB8A0]'} hover:opacity-90`}
@@ -431,20 +646,40 @@ export default function PostDetailPage() {
           </div>
           {/* 댓글 섹션 */}
           <div className="mt-8">
-            <h2 className="text-lg font-bold mb-4">Comments</h2>
+            <h2 className="text-lg font-bold mb-4">{t('community.comments')}</h2>
             {comments.length === 0 ? (
-              <div className="text-gray-400">No comments yet.</div>
+              <div className="text-gray-400">{t('community.noComments')}</div>
             ) : (
               <div className="space-y-3">
                 {comments.map((c) => (
                   <div key={c.id} className="bg-gray-50 rounded-lg p-3">
                     {/* 닉네임 행: 닉네임+국기 / 오른쪽 끝에 시간 + ··· 메뉴 */}
                     <div className="flex items-center gap-2 mb-1">
-                      <AvatarImage src={c.profile_image_url} size={28} />
-                      <span className="font-semibold text-[#9DB8A0]">{c.nickname || "Unknown"}</span>
+                      <button
+                        type="button"
+                        className="flex-shrink-0"
+                        onClick={() => {
+                          if (c.author_id !== currentUserId) {
+                            setProfileModalUserId(c.author_id);
+                          }
+                        }}
+                      >
+                        <AvatarImage src={c.profile_image_url} size={28} />
+                      </button>
+                      <button
+                        type="button"
+                        className="font-semibold text-[#9DB8A0] hover:underline"
+                        onClick={() => {
+                          if (c.author_id !== currentUserId) {
+                            setProfileModalUserId(c.author_id);
+                          }
+                        }}
+                      >
+                        {c.nickname || "Unknown"}
+                      </button>
                       {c.flag && <span className="text-xl">{getFlagEmoji(c.flag)}</span>}
-                      <span className="ml-auto text-xs text-gray-400">{new Date(c.created_at).toLocaleString()}</span>
-                      {isLoggedIn && c.author_id === currentUserId && (
+                      <span className="ml-auto text-xs text-gray-400">{timeAgo(c.created_at)}</span>
+                      {isLoggedIn && (
                         <div className="relative">
                           <button
                             className="text-gray-400 hover:text-gray-600 px-2 py-1 rounded text-base leading-none"
@@ -461,25 +696,39 @@ export default function PostDetailPage() {
                                 onClick={() => setCommentMenuOpen(null)}
                               />
                               <div className="absolute right-0 top-8 z-20 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden w-24">
-                                <button
-                                  className="w-full text-center py-3 text-sm text-blue-500 hover:bg-gray-50 border-b border-gray-100"
-                                  onClick={() => {
-                                    setEditingCommentId(c.id);
-                                    setEditText(c.content);
-                                    setCommentMenuOpen(null);
-                                  }}
-                                >
-                                  수정
-                                </button>
-                                <button
-                                  className="w-full text-center py-3 text-sm text-red-500 hover:bg-gray-50"
-                                  onClick={() => {
-                                    handleDeleteComment(c.id, c.author_id);
-                                    setCommentMenuOpen(null);
-                                  }}
-                                >
-                                  삭제
-                                </button>
+                                {c.author_id === currentUserId ? (
+                                  <>
+                                    <button
+                                      className="w-full text-center py-3 text-sm text-blue-500 hover:bg-gray-50 border-b border-gray-100"
+                                      onClick={() => {
+                                        setEditingCommentId(c.id);
+                                        setEditText(c.content);
+                                        setCommentMenuOpen(null);
+                                      }}
+                                    >
+                                      {t('common.edit')}
+                                    </button>
+                                    <button
+                                      className="w-full text-center py-3 text-sm text-red-500 hover:bg-gray-50"
+                                      onClick={() => {
+                                        handleDeleteComment(c.id, c.author_id);
+                                        setCommentMenuOpen(null);
+                                      }}
+                                    >
+                                      {t('common.delete')}
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    className="w-full text-center py-3 text-sm text-gray-600 hover:bg-gray-50"
+                                    onClick={() => {
+                                      setReportTarget({ type: 'comment', id: c.id });
+                                      setCommentMenuOpen(null);
+                                    }}
+                                  >
+                                    {t('community.report')}
+                                  </button>
+                                )}
                               </div>
                             </>
                           )}
@@ -498,17 +747,39 @@ export default function PostDetailPage() {
                           className="bg-[#9DB8A0] text-white px-3 py-1 rounded-lg text-sm hover:opacity-90"
                           onClick={() => handleEditComment(c.id)}
                         >
-                          저장
+                          {t('common.save')}
                         </button>
                         <button
                           className="bg-gray-100 text-gray-600 px-3 py-1 rounded-lg text-sm hover:bg-gray-200"
                           onClick={() => { setEditingCommentId(null); setEditText(""); }}
                         >
-                          취소
+                          {t('common.cancel')}
                         </button>
                       </div>
                     ) : (
-                      <div className="text-gray-700 text-sm mb-2">{c.content}</div>
+                      <div className="text-gray-700 text-sm mb-2">
+                        {showOriginalComments[c.id] || !translatedComments[c.id]?.isTranslated
+                          ? c.content
+                          : translatedComments[c.id].text}
+                        {translatedComments[c.id]?.isTranslated && (
+                          <span className="ml-1 inline-flex items-center gap-1 align-middle">
+                            <span className="text-xs text-gray-400">🌐 {t('community.translated')}</span>
+                            <button
+                              className="text-xs text-[#9DB8A0] underline hover:opacity-80"
+                              onClick={() =>
+                                setShowOriginalComments((prev) => ({
+                                  ...prev,
+                                  [c.id]: !prev[c.id],
+                                }))
+                              }
+                            >
+                              {showOriginalComments[c.id]
+                                ? t('community.viewTranslation')
+                                : t('community.viewOriginal')}
+                            </button>
+                          </span>
+                        )}
+                      </div>
                     )}
                     {c.image_url && (
                       <img src={c.image_url} alt="comment-img" className="w-20 h-20 object-cover rounded mt-1 mb-2" />
@@ -541,7 +812,7 @@ export default function PostDetailPage() {
                     className="text-xs text-gray-400 hover:text-red-400 transition"
                     onClick={() => setCommentImage(null)}
                   >
-                    × Remove
+                    {t('community.removeImage')}
                   </button>
                 </div>
               )}
@@ -552,7 +823,7 @@ export default function PostDetailPage() {
                     <circle cx="8.5" cy="8.5" r="1.5"/>
                     <polyline points="21 15 16 10 5 21"/>
                   </svg>
-                  <span>Picture</span>
+                  <span>{t('community.picture')}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -569,7 +840,7 @@ export default function PostDetailPage() {
                   type="text"
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Write a comment..."
+                  placeholder={t('community.commentPlaceholder')}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9DB8A0]"
                   disabled={commentLoading || !isLoggedIn}
                 />
@@ -578,17 +849,42 @@ export default function PostDetailPage() {
                   className="bg-[#9DB8A0] text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50"
                   disabled={commentLoading || !isLoggedIn || (!commentText.trim() && !commentImage)}
                 >
-                  Send
+                  {t('common.send')}
                 </button>
               </div>
             </form>
             {!isLoggedIn && (
-              <div className="text-xs text-gray-400 mt-2">Login required to comment.</div>
+              <div className="text-xs text-gray-400 mt-2">{t('community.loginToComment')}</div>
             )}
           </div>
         </div>
       ) : null}
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      {profileModalUserId && (
+        <UserProfileModal
+          userId={profileModalUserId}
+          currentUserId={currentUserId}
+          isOpen={!!profileModalUserId}
+          onClose={() => setProfileModalUserId(null)}
+          onLoginRequired={() => {
+            setProfileModalUserId(null);
+            setIsLoginOpen(true);
+          }}
+          onBlockChange={() => setCommentVersion((v) => v + 1)}
+        />
+      )}
+      {reportTarget && (
+        <ReportModal
+          isOpen={!!reportTarget}
+          onClose={() => setReportTarget(null)}
+          targetType={reportTarget.type}
+          targetId={reportTarget.id}
+          onLoginRequired={() => {
+            setReportTarget(null);
+            setIsLoginOpen(true);
+          }}
+        />
+      )}
     </div>
   );
 }

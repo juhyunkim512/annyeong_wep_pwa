@@ -1,19 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
+import { supabase } from '@/lib/supabase/client';
+import '@/lib/i18n';
 
 interface SignupFormData {
   email: string;
   password: string;
   nickname: string;
   flag: string;
-  uselanguage: string;
   purpose: 'community' | 'service' | 'information';
   current_status: 'living_in_korea' | 'planning_to_move';
 }
 
 interface ValidationStatus {
-  email: boolean | null;
   nickname: boolean | null;
 }
 
@@ -31,28 +33,6 @@ const FLAG_OPTIONS = [
   { label: '🇵🇭 Philippines', value: 'philippines' },
 ];
 
-// UI 표시 / DB 저장값 분리 - Language Options
-const LANGUAGE_OPTIONS = [
-  { label: 'English', value: 'english' },
-  { label: '한국어', value: 'korean' },
-  { label: '中文', value: 'chinese' },
-  { label: '日本語', value: 'japanese' },
-  { label: 'Tiếng Việt', value: 'vietnamese' },
-  { label: 'Español', value: 'spanish' },
-];
-
-// Purpose Options
-const PURPOSE_OPTIONS = [
-  { label: 'Community', value: 'community' },
-  { label: 'Service', value: 'service' },
-  { label: 'Information', value: 'information' },
-] as const;
-
-// Current Status Options
-const STATUS_OPTIONS = [
-  { label: 'Currently Living in Korea', value: 'living_in_korea' },
-  { label: 'Planning to Move to Korea', value: 'planning_to_move' },
-] as const;
 
 interface SignupModalProps {
   isOpen: boolean;
@@ -60,19 +40,30 @@ interface SignupModalProps {
 }
 
 export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
+  const router = useRouter();
+  const { t } = useTranslation('common');
   // 초기값: 직접 문자열 코드값 사용 (null.value 에러 방지)
   const [formData, setFormData] = useState<SignupFormData>({
     email: '',
     password: '',
     nickname: '',
-    flag: 'kr', // 코드값: kr
-    uselanguage: 'en', // 코드값: en
+    flag: 'korea',
     purpose: 'community',
     current_status: 'living_in_korea',
   });
 
+  const PURPOSE_OPTIONS = [
+    { label: t('signup.purposeOptions.community'), value: 'community' as const },
+    { label: t('signup.purposeOptions.service'), value: 'service' as const },
+    { label: t('signup.purposeOptions.information'), value: 'information' as const },
+  ];
+
+  const STATUS_OPTIONS = [
+    { label: t('signup.statusOptions.living'), value: 'living_in_korea' as const },
+    { label: t('signup.statusOptions.planning'), value: 'planning_to_move' as const },
+  ];
+
   const [validationStatus, setValidationStatus] = useState<ValidationStatus>({
-    email: null,
     nickname: null,
   });
 
@@ -81,11 +72,17 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
     nickname: '',
   });
 
+  // OTP 관련 상태
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [checkedFields, setCheckedFields] = useState({
-    email: false,
     nickname: false,
   });
 
@@ -102,15 +99,6 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
     'Sau khi chọn, bạn có thể sẽ khó thay đổi lại sau này.',
   ];
 
-  // Helper function: 코드값으로 UI 레이블 가져오기
-  const getFlagLabel = (value: string): string => {
-    return FLAG_OPTIONS.find((opt) => opt.value === value)?.label || '';
-  };
-
-  const getLanguageLabel = (value: string): string => {
-    return LANGUAGE_OPTIONS.find((opt) => opt.value === value)?.label || '';
-  };
-
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -122,10 +110,12 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
     setError('');
     setSuccess('');
 
-    // Reset validation when user edits the field
+    // 이메일이 바뀌면 OTP 인증 초기화
     if (name === 'email') {
-      setValidationStatus((prev) => ({ ...prev, email: null }));
-      setCheckedFields((prev) => ({ ...prev, email: false }));
+      setOtpSent(false);
+      setOtpCode('');
+      setIsEmailVerified(false);
+      setValidationMessages((prev) => ({ ...prev, email: '' }));
     }
     if (name === 'nickname') {
       setValidationStatus((prev) => ({ ...prev, nickname: null }));
@@ -140,43 +130,76 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
     }));
   };
 
-  const checkEmail = async () => {
+  // 이메일 인증코드 발송 (자체 서버 — auth user 생성 없음)
+  const sendOtp = async () => {
     if (!formData.email) {
-      setValidationMessages((prev) => ({
-        ...prev,
-        email: 'Please enter an email.',
-      }));
+      setValidationMessages((prev) => ({ ...prev, email: t('signup.enterEmail') }));
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setValidationMessages((prev) => ({ ...prev, email: t('signup.invalidEmailFormat') }));
       return;
     }
 
-    setLoading(true);
+    setSendingOtp(true);
     setError('');
     setValidationMessages((prev) => ({ ...prev, email: '' }));
 
     try {
-      const response = await fetch('/api/check-email', {
+      const res = await fetch('/api/auth/send-signup-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email }),
       });
-
-      const data = await response.json();
-
-      setValidationStatus((prev) => ({
-        ...prev,
-        email: data.available,
-      }));
-
-      setValidationMessages((prev) => ({
-        ...prev,
-        email: data.message,
-      }));
-
-      setCheckedFields((prev) => ({ ...prev, email: true }));
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 409) {
+          setValidationMessages((prev) => ({ ...prev, email: t('signup.emailAlreadyRegistered') }));
+        } else {
+          setError(data.message || t('signup.emailCheckFailed'));
+        }
+        return;
+      }
+      setOtpSent(true);
+      setValidationMessages((prev) => ({ ...prev, email: t('signup.otpSent') }));
     } catch {
-      setError('Failed to check email. Please try again.');
+      setError(t('signup.emailCheckFailed'));
     } finally {
-      setLoading(false);
+      setSendingOtp(false);
+    }
+  };
+
+  // 인증번호 검증 (자체 서버 — auth user / session 생성 없음)
+  const verifyOtp = async () => {
+    if (!otpCode) return;
+
+    setVerifyingOtp(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/auth/verify-signup-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, code: otpCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.errorType === 'codeExpired') {
+          setError(t('signup.codeExpired'));
+        } else if (data.errorType === 'tooManyAttempts') {
+          setError(t('signup.tooManyAttempts'));
+        } else {
+          setError(t('signup.invalidCode'));
+        }
+        return;
+      }
+      setIsEmailVerified(true);
+      setValidationMessages((prev) => ({ ...prev, email: t('signup.emailVerified') }));
+    } catch {
+      setError(t('signup.invalidCode'));
+    } finally {
+      setVerifyingOtp(false);
     }
   };
 
@@ -184,7 +207,7 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
     if (!formData.nickname) {
       setValidationMessages((prev) => ({
         ...prev,
-        nickname: 'Please enter a nickname.',
+        nickname: t('signup.enterNickname'),
       }));
       return;
     }
@@ -214,16 +237,17 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
 
       setCheckedFields((prev) => ({ ...prev, nickname: true }));
     } catch {
-      setError('Failed to check nickname. Please try again.');
+      setError(t('signup.nicknameCheckFailed'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLanguageChange = (
+  const handleFlagChange = (
     e: React.ChangeEvent<HTMLSelectElement>
   ) => {
     const newValue = e.currentTarget.value;
+    if (newValue === formData.flag) return; // 동일 값 선택 시 경고창 표시 안 함
     setLanguageToConfirm(newValue);
     setShowLanguageWarning(true);
   };
@@ -232,7 +256,7 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
     if (languageToConfirm) {
       setFormData((prev) => ({
         ...prev,
-        uselanguage: languageToConfirm,
+        flag: languageToConfirm,
       }));
     }
     setShowLanguageWarning(false);
@@ -249,19 +273,18 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
     setError('');
     setSuccess('');
 
-    // Validation
-    if (!validationStatus.email) {
-      setError('Please check that your email is available.');
+    if (!isEmailVerified) {
+      setError(t('signup.verifyFirst'));
       return;
     }
 
     if (!validationStatus.nickname) {
-      setError('Please check that your nickname is available.');
+      setError(t('signup.nicknameRequired'));
       return;
     }
 
     if (!formData.password) {
-      setError('Please enter a password.');
+      setError(t('signup.passwordRequired'));
       return;
     }
 
@@ -271,34 +294,50 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
       const response = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          nickname: formData.nickname,
+          flag: formData.flag,
+          purpose: formData.purpose,
+          current_status: formData.current_status,
+        }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.message || 'Sign up failed. Please try again.');
+        setError(data.message || t('signup.failed'));
         return;
       }
 
-      setSuccess('Sign up completed successfully.');
+      // 가입 성공 → 자동 로그인
+      await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+      setSuccess(t('signup.success'));
       setTimeout(() => {
         onClose();
-        // Reset form - 코드값 기반으로 초기화
+        // Reset form
         setFormData({
           email: '',
           password: '',
           nickname: '',
-          flag: 'kr',
-          uselanguage: 'en',
+          flag: 'korea',
           purpose: 'community',
           current_status: 'living_in_korea',
         });
-        setValidationStatus({ email: null, nickname: null });
-        setCheckedFields({ email: false, nickname: false });
+        setValidationStatus({ nickname: null });
+        setCheckedFields({ nickname: false });
+        setOtpSent(false);
+        setOtpCode('');
+        setIsEmailVerified(false);
+        setValidationMessages({ email: '', nickname: '' });
+        router.push('/dashboard/home');
       }, 1500);
     } catch {
-      setError('Sign up failed. Please try again.');
+      setError(t('signup.failed'));
     } finally {
       setLoading(false);
     }
@@ -311,7 +350,7 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
       <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Sign Up</h2>
+          <h2 className="text-2xl font-bold">{t('signup.title')}</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -323,9 +362,9 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Email */}
+          {/* Email + OTP */}
           <div>
-            <label className="block text-sm font-semibold mb-2">Email</label>
+            <label className="block text-sm font-semibold mb-2">{t('signup.email')}</label>
             <div className="flex gap-2">
               <input
                 type="email"
@@ -334,32 +373,53 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
                 onChange={handleInputChange}
                 placeholder="your@email.com"
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9DB8A0]"
-                disabled={loading}
+                disabled={loading || isEmailVerified || sendingOtp}
               />
               <button
                 type="button"
-                onClick={checkEmail}
-                disabled={loading || !formData.email}
-                className="px-4 py-2 bg-[#9DB8A0] text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
+                onClick={sendOtp}
+                disabled={sendingOtp || verifyingOtp || loading || !formData.email || isEmailVerified}
+                className="whitespace-nowrap px-4 py-2 bg-[#9DB8A0] text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
               >
-                Check
+                {sendingOtp ? t('signup.sending') : t('signup.sendCode')}
               </button>
             </div>
-            {checkedFields.email && validationMessages.email && (
-              <p
-                className={`text-xs mt-2 ${
-                  validationStatus.email ? 'text-green-600' : 'text-red-600'
-                }`}
-              >
+
+            {/* OTP 상태 메시지 */}
+            {validationMessages.email && (
+              <p className={`text-xs mt-1 ${isEmailVerified ? 'text-green-600' : otpSent ? 'text-blue-600' : 'text-red-600'}`}>
                 {validationMessages.email}
               </p>
+            )}
+
+            {/* 인증번호 입력 (OTP 발송 후, 인증 전) */}
+            {otpSent && !isEmailVerified && (
+              <div className="flex gap-2 mt-2">
+                <input
+                  type="text"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  placeholder={t('signup.verificationCode')}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9DB8A0] text-center tracking-widest"
+                  maxLength={6}
+                  disabled={verifyingOtp || loading}
+                />
+                <button
+                  type="button"
+                  onClick={verifyOtp}
+                  disabled={verifyingOtp || loading || otpCode.length < 6}
+                  className="whitespace-nowrap px-4 py-2 bg-[#9DB8A0] text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
+                >
+                  {verifyingOtp ? t('signup.verifying') : t('signup.verifyCode')}
+                </button>
+              </div>
             )}
           </div>
 
           {/* Password */}
           <div>
             <label className="block text-sm font-semibold mb-2">
-              Password
+              {t('signup.password')}
             </label>
             <input
               type="password"
@@ -374,7 +434,7 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
 
           {/* Nickname */}
           <div>
-            <label className="block text-sm font-semibold mb-2">Nickname</label>
+            <label className="block text-sm font-semibold mb-2">{t('signup.nickname')}</label>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -391,7 +451,7 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
                 disabled={loading || !formData.nickname}
                 className="px-4 py-2 bg-[#9DB8A0] text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
               >
-                Check
+                {t('signup.check')}
               </button>
             </div>
 
@@ -408,11 +468,11 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
 
           {/* Flag - Select with code values */}
           <div>
-            <label className="block text-sm font-semibold mb-2">Country</label>
+            <label className="block text-sm font-semibold mb-2">{t('signup.country')}</label>
             <select
               name="flag"
               value={formData.flag}
-              onChange={handleInputChange}
+              onChange={handleFlagChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9DB8A0]"
               disabled={loading}
             >
@@ -424,29 +484,9 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
             </select>
           </div>
 
-          {/* Use Language - Select with code values */}
-          <div>
-            <label className="block text-sm font-semibold mb-2">
-              Preferred Language
-            </label>
-            <select
-              name="uselanguage"
-              value={formData.uselanguage}
-              onChange={handleLanguageChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9DB8A0]"
-              disabled={loading}
-            >
-              {LANGUAGE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Purpose */}
           <div>
-            <label className="block text-sm font-semibold mb-2">Purpose</label>
+            <label className="block text-sm font-semibold mb-2">{t('signup.purpose')}</label>
             <div className="flex gap-2 flex-wrap">
               {PURPOSE_OPTIONS.map((item) => (
                 <button
@@ -468,7 +508,7 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
 
           {/* Current Status */}
           <div>
-            <label className="block text-sm font-semibold mb-2">Status</label>
+            <label className="block text-sm font-semibold mb-2">{t('signup.status')}</label>
             <div className="flex gap-2 flex-wrap">
               {STATUS_OPTIONS.map((item) => (
                 <button
@@ -499,13 +539,13 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
             type="submit"
             disabled={
               loading ||
-              !validationStatus.email ||
+              !isEmailVerified ||
               !validationStatus.nickname ||
               !formData.password
             }
             className="w-full bg-[#9DB8A0] text-white py-3 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 mt-6"
           >
-            {loading ? 'Signing Up...' : 'Sign Up'}
+            {loading ? t('signup.signingUp') : t('signup.title')}
           </button>
 
           <button
@@ -514,7 +554,7 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
             disabled={loading}
             className="w-full text-gray-600 py-2 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
         </form>
       </div>
@@ -524,7 +564,7 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6">
             {/* Header */}
-            <h3 className="text-lg font-bold mb-4">Confirm Language Selection</h3>
+            <h3 className="text-lg font-bold mb-4">{t('signup.confirmLanguageTitle')}</h3>
 
             {/* Warning Messages - 6 Languages */}
             <div className="space-y-3 mb-6 max-h-60 overflow-y-auto">
@@ -545,13 +585,13 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
                 onClick={handleConfirmLanguage}
                 className="flex-1 bg-[#9DB8A0] text-white py-2 rounded-lg font-semibold hover:opacity-90 transition"
               >
-                Confirm
+                {t('signup.confirm')}
               </button>
               <button
                 onClick={handleCancelLanguage}
                 className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-300 transition"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
             </div>
           </div>

@@ -1,51 +1,26 @@
 'use client'
 
+import { useTranslation } from 'react-i18next'
+import '@/lib/i18n'
+
 export default function ServicesPage() {
+  const { t } = useTranslation('common')
+
   const services = [
-    {
-      icon: '🎯',
-      title: '2-Week Settlement VIP Package',
-      description: 'Get all services in one go',
-    },
-    {
-      icon: '📋',
-      title: 'Visa Consultation',
-      description: 'Expert help with visa applications and requirements',
-    },
-    {
-      icon: '🏠',
-      title: 'Housing',
-      description: 'Find apartments, share houses, and officetels',
-    },
-    {
-      icon: '📱',
-      title: 'Phone Plans',
-      description: 'Easy mobile phone setup with local carriers',
-    },
-    {
-      icon: '🏦',
-      title: 'Bank Account',
-      description: 'Open and set up your Korean bank account',
-    },
-    {
-      icon: '📚',
-      title: 'Academy & Classes',
-      description: 'Find language schools, universities, and academies',
-    },
-    {
-      icon: '💼',
-      title: 'Job Opportunities',
-      description: 'Browse part-time and full-time job listings, --- not included in MVP ---',
-    },
+    { icon: '🎯', title: t('services.vipPackage.title'), description: t('services.vipPackage.desc') },
+    { icon: '📋', title: t('services.visa.title'), description: t('services.visa.desc') },
+    { icon: '🏠', title: t('services.housing.title'), description: t('services.housing.desc') },
+    { icon: '📱', title: t('services.phone.title'), description: t('services.phone.desc') },
+    { icon: '🏦', title: t('services.bank.title'), description: t('services.bank.desc') },
+    { icon: '📚', title: t('services.academy.title'), description: t('services.academy.desc') },
+    { icon: '💼', title: t('services.job.title'), description: t('services.job.desc') },
   ]
 
   return (
     <div className="max-w-6xl space-y-6">
       <div>
-        <h1 className="text-4xl font-bold mb-2">Our Services</h1>
-        <p className="text-gray-600">
-          Everything you need to settle comfortably in Korea, from day one.
-        </p>
+        <h1 className="text-4xl font-bold mb-2">{t('services.title')}</h1>
+        <p className="text-gray-600">{t('services.subtitle')}</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -58,12 +33,11 @@ export default function ServicesPage() {
             <h3 className="text-lg font-semibold mb-2">{service.title}</h3>
             <p className="text-gray-600 text-sm">{service.description}</p>
             <button className="mt-4 text-sm font-semibold text-[#9DB8A0] hover:underline">
-              Learn more →
+              {t('services.learnMore')}
             </button>
           </div>
         ))}
       </div>
-
     </div>
   )
 }

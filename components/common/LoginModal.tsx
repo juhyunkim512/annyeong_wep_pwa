@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import FindIdModal from './FindIdModal';
 import ResetPasswordModal from './ResetPasswordModal';
+import { useTranslation } from 'react-i18next';
+import '@/lib/i18n';
 
 interface LoginFormData {
   email: string;
@@ -18,6 +20,7 @@ interface LoginModalProps {
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const router = useRouter();
+  const { t } = useTranslation('common');
   const [formData, setFormData] = useState<LoginFormData>({
     email: '',
     password: '',
@@ -50,12 +53,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setSuccess('');
 
     if (!formData.email) {
-      setError('Please enter your email.');
+      setError(t('auth.emailRequired'));
       return;
     }
 
     if (!formData.password) {
-      setError('Please enter your password.');
+      setError(t('auth.passwordRequired'));
       return;
     }
 
@@ -72,14 +75,29 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         return;
       }
 
-      setSuccess('Login successful!');
+      // Check if account has been soft-deleted
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profileData } = await supabase
+          .from('profile')
+          .select('is_deleted')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (profileData?.is_deleted) {
+          await supabase.auth.signOut();
+          setError(t('auth.accountDeleted'));
+          return;
+        }
+      }
+
+      setSuccess(t('auth.loginSuccess'));
       setTimeout(() => {
         onClose();
         setFormData({ email: '', password: '' });
         router.push('/dashboard/home');
       }, 1500);
     } catch (err) {
-      setError('Login failed. Please try again.');
+      setError(t('auth.loginFailed'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -94,7 +112,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         <div className="bg-white rounded-2xl max-w-md w-full">
           {/* Header */}
           <div className="border-b border-gray-200 p-6 flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Login</h2>
+            <h2 className="text-2xl font-bold">{t('auth.login')}</h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -108,13 +126,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             {/* Email */}
             <div>
-              <label className="block text-sm font-semibold mb-2">Email</label>
+              <label className="block text-sm font-semibold mb-2">{t('auth.email')}</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                placeholder="Enter your email"
+                placeholder={t('auth.enterEmail')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9DB8A0]"
                 disabled={loading}
               />
@@ -122,7 +140,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-semibold mb-2">Password</label>
+              <label className="block text-sm font-semibold mb-2">{t('auth.password')}</label>
               <div className="relative flex items-center">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -156,7 +174,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               disabled={loading || !formData.email || !formData.password}
               className="w-full bg-[#9DB8A0] text-white py-3 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 mt-6"
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? t('auth.loggingIn') : t('auth.login')}
             </button>
 
             {/* Helper Links */}
@@ -167,7 +185,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 className="text-xs text-gray-500 hover:text-gray-700 underline"
                 disabled={loading}
               >
-                Find ID
+                {t('auth.findId')}
               </button>
               <div className="text-gray-300">•</div>
               <button
@@ -176,7 +194,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 className="text-xs text-gray-500 hover:text-gray-700 underline"
                 disabled={loading}
               >
-                Reset Password
+                {t('auth.resetPasswordLink')}
               </button>
             </div>
 
@@ -187,7 +205,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               disabled={loading}
               className="w-full text-gray-600 py-2 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </form>
         </div>

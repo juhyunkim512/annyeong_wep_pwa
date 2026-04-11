@@ -1,73 +1,152 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
+import '@/lib/i18n'
+
+// ── 번역 헬퍼 (모듈 레벨) ─────────────────────────
+const LANG_MAP: Record<string, string> = {
+  english: 'en', korean: 'ko', japanese: 'ja',
+  chinese: 'zh', spanish: 'es', vietnamese: 'vi',
+  en: 'en', ko: 'ko', ja: 'ja', zh: 'zh', es: 'es', vi: 'vi',
+  'zh-cn': 'zh', 'zh-tw': 'zh', 'zh-hant': 'zh', 'zh-hans': 'zh',
+}
+function normalizeLang(v?: string | null): string {
+  if (!v) return 'en'
+  return LANG_MAP[v.toLowerCase().trim()] ?? 'en'
+}
+async function callTranslate(
+  contentId: string,
+  sourceText: string,
+  sourceLanguage: string,
+  accessToken: string,
+  signal: AbortSignal,
+): Promise<{ text: string; isTranslated: boolean }> {
+  try {
+    const res = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+      body: JSON.stringify({ contentType: 'post', contentId, fieldName: 'title', sourceText, sourceLanguage }),
+      signal,
+    })
+    if (!res.ok) return { text: sourceText, isTranslated: false }
+    return await res.json()
+  } catch {
+    return { text: sourceText, isTranslated: false }
+  }
+}
 
 interface PostSummary {
   id: string
   title: string
+  language: string
   created_at: string
   like_count: number
   nickname: string | null
 }
 
-function timeAgo(dateStr: string) {
-  const diff = (Date.now() - new Date(dateStr).getTime()) / 1000
-  if (diff < 60) return 'just now'
-  if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`
-  return `${Math.floor(diff / 86400)} days ago`
-}
-
 export default function HomePage() {
+  const { t } = useTranslation('common')
   const [currentBanner, setCurrentBanner] = useState(0)
+
+  const timeAgo = (dateStr: string) => {
+    const diff = (Date.now() - new Date(dateStr).getTime()) / 1000
+    if (diff < 60) return t('common.justNow')
+    if (diff < 3600) return t('common.minutesAgo', { count: Math.floor(diff / 60) })
+    if (diff < 86400) return t('common.hoursAgo', { count: Math.floor(diff / 3600) })
+    if (diff < 86400 * 7) return t('common.daysAgo', { count: Math.floor(diff / 86400) })
+    if (diff < 86400 * 30) return t('common.weeksAgo', { count: Math.floor(diff / (86400 * 7)) })
+    if (diff < 86400 * 365) return t('common.monthsAgo', { count: Math.floor(diff / (86400 * 30)) })
+    return t('common.yearsAgo', { count: Math.floor(diff / (86400 * 365)) })
+  }
   const [recentPosts, setRecentPosts] = useState<PostSummary[]>([])
   const [trendingPosts, setTrendingPosts] = useState<PostSummary[]>([])
+  const [translatedTitles, setTranslatedTitles] = useState<Record<string, string>>({})
   const [postsLoading, setPostsLoading] = useState(true)
+  // request id ref: 최신 요청만 상태 반영, stale 응답은 loading 건드리지 않음
+  const reqRef = useRef(0)
 
   useEffect(() => {
+    const reqId = ++reqRef.current
+    const controller = new AbortController()
     const fetchPosts = async () => {
       setPostsLoading(true)
+      try {
+        // Recent + Trending 병렬 fetch
+        const [{ data: recent }, { data: trending }] = await Promise.all([
+          supabase
+            .from('post')
+            .select('id, title, language, created_at, like_count, public_profile(nickname)')
+            .order('created_at', { ascending: false })
+            .limit(3),
+          supabase
+            .from('post')
+            .select('id, title, language, created_at, like_count, public_profile(nickname)')
+            .gte('like_count', 10)
+            .order('created_at', { ascending: false })
+            .limit(3),
+        ])
 
-      // Recent Posts: 최신 3개
-      const { data: recent } = await supabase
-        .from('post')
-        .select('id, title, created_at, like_count, profile(nickname)')
-        .order('created_at', { ascending: false })
-        .limit(3)
+        if (reqRef.current !== reqId) return
 
-      // Trending Posts: 3일 이내 like_count 높은 순 3개
-      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
-      const { data: trending } = await supabase
-        .from('post')
-        .select('id, title, created_at, like_count, public_profile(nickname)')
-        .gte('created_at', threeDaysAgo)
-        .order('like_count', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(3)
+        const normalize = (rows: any[]): PostSummary[] =>
+          (rows || []).map((r) => ({
+            id: r.id,
+            title: r.title,
+            language: r.language ?? 'english',
+            created_at: r.created_at,
+            like_count: r.like_count,
+            nickname: Array.isArray(r.public_profile) ? r.public_profile[0]?.nickname : r.public_profile?.nickname ?? null,
+          }))
 
-      const normalize = (rows: any[]): PostSummary[] =>
-        (rows || []).map((r) => ({
-          id: r.id,
-          title: r.title,
-          created_at: r.created_at,
-          like_count: r.like_count,
-          nickname: Array.isArray(r.public_profile) ? r.public_profile[0]?.nickname : r.public_profile?.nickname ?? null,
-        }))
+        const normalizedRecent = normalize(recent ?? [])
+        const normalizedTrending = normalize(trending ?? [])
+        setRecentPosts(normalizedRecent)
+        setTrendingPosts(normalizedTrending)
 
-      setRecentPosts(normalize(recent ?? []))
-      setTrendingPosts(normalize(trending ?? []))
-      setPostsLoading(false)
+        // ── 제목 번역 ───────────────────────────────────
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session && reqRef.current === reqId) {
+          const { data: userProfile } = await supabase
+            .from('profile')
+            .select('uselanguage')
+            .eq('id', session.user.id)
+            .maybeSingle()
+          const userLang = normalizeLang(userProfile?.uselanguage)
+          const accessToken = session.access_token
+
+          const allPosts = [...normalizedRecent, ...normalizedTrending]
+          const unique = allPosts.filter((p, i) => allPosts.findIndex((q) => q.id === p.id) === i)
+          const toTranslate = unique.filter((p) => normalizeLang(p.language) !== userLang)
+
+          if (toTranslate.length > 0) {
+            const results = await Promise.all(
+              toTranslate.map((p) => callTranslate(p.id, p.title, p.language, accessToken, controller.signal))
+            )
+            if (reqRef.current === reqId && !controller.signal.aborted) {
+              const map: Record<string, string> = {}
+              toTranslate.forEach((p, i) => { if (results[i].isTranslated) map[p.id] = results[i].text })
+              setTranslatedTitles(map)
+            }
+          }
+        }
+      } catch (err) {
+        if (reqRef.current !== reqId) return
+        console.error('[Home] fetchPosts error:', err)
+      } finally {
+        if (reqRef.current === reqId) setPostsLoading(false)
+      }
     }
     fetchPosts()
+    return () => controller.abort()
   }, [])
 
   const banners = [
-    { title: 'Support Policies for Foreigners', description: '2024 New Policies and Funding Information', icon: '🏛️' },
-    { title: 'Visa & Residence Updates', description: 'Latest Visa Regulations and Changes', icon: '📄' },
-    { title: 'Services for Internationals', description: 'Discover All ANNYEONG Services', icon: '✨' },
-    { title: 'ANNYEONG Announcements', description: 'Community Updates & New Features', icon: '📢' },
+    { title: t('home.banners.services.title'), description: t('home.banners.services.desc'), icon: '✨' },
+    { title: t('home.banners.policy.title'), description: t('home.banners.policy.desc'), icon: '🏙️' },
+    { title: t('home.banners.announcements.title'), description: t('home.banners.announcements.desc'), icon: '📢' },
   ]
 
   const nextBanner = () => {
@@ -77,6 +156,14 @@ export default function HomePage() {
   const prevBanner = () => {
     setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)
   }
+
+  // 2초마다 자동 슬라이드 — cleanup으로 메모리 누수 방지
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentBanner((prev) => (prev + 1) % banners.length)
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [banners.length])
 
   return (
     <div className="max-w-6xl space-y-8">
@@ -122,19 +209,19 @@ export default function HomePage() {
 
       {/* Recent Posts */}
       <section className="bg-white rounded-2xl border border-gray-200 p-6">
-        <h2 className="text-2xl font-bold mb-4">Recent Posts</h2>
+        <h2 className="text-2xl font-bold mb-4">{t('home.recentPosts')}</h2>
         {postsLoading ? (
-          <div className="text-gray-400 text-sm py-4 text-center">Loading...</div>
+          <div className="text-gray-400 text-sm py-4 text-center">{t('common.loading')}</div>
         ) : recentPosts.length === 0 ? (
-          <div className="text-gray-400 text-sm py-4 text-center">No recent posts yet.</div>
+          <div className="text-gray-400 text-sm py-4 text-center">{t('home.noRecentPosts')}</div>
         ) : (
           <div className="space-y-3">
             {recentPosts.map((post) => (
               <Link href={`/dashboard/community/${post.id}`} key={post.id}>
                 <div className="p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition">
-                  <p className="font-semibold text-gray-900">{post.title}</p>
+                  <p className="font-semibold text-gray-900">{translatedTitles[post.id] ?? post.title}</p>
                   <p className="text-sm text-gray-500 mt-1">
-                    by {post.nickname ?? 'Unknown'} • {timeAgo(post.created_at)}
+                    {t('common.by')} {post.nickname ?? t('common.unknown')} • {timeAgo(post.created_at)}
                   </p>
                 </div>
               </Link>
@@ -145,19 +232,19 @@ export default function HomePage() {
 
       {/* Trending Posts */}
       <section className="bg-white rounded-2xl border border-gray-200 p-6">
-        <h2 className="text-2xl font-bold mb-4">Trending Posts</h2>
+        <h2 className="text-2xl font-bold mb-4">{t('home.trendingPosts')}</h2>
         {postsLoading ? (
-          <div className="text-gray-400 text-sm py-4 text-center">Loading...</div>
+          <div className="text-gray-400 text-sm py-4 text-center">{t('common.loading')}</div>
         ) : trendingPosts.length === 0 ? (
-          <div className="text-gray-400 text-sm py-4 text-center">No trending posts right now.</div>
+          <div className="text-gray-400 text-sm py-4 text-center">{t('home.noTrendingPosts')}</div>
         ) : (
           <div className="space-y-3">
             {trendingPosts.map((post) => (
               <Link href={`/dashboard/community/${post.id}`} key={post.id}>
                 <div className="p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition">
-                  <p className="font-semibold text-gray-900">{post.title}</p>
+                  <p className="font-semibold text-gray-900">{translatedTitles[post.id] ?? post.title}</p>
                   <p className="text-sm text-gray-500 mt-1">
-                    by {post.nickname ?? 'Unknown'} • {timeAgo(post.created_at)} • ♡ {post.like_count}
+                    {t('common.by')} {post.nickname ?? t('common.unknown')} • {timeAgo(post.created_at)} • ♡ {post.like_count}
                   </p>
                 </div>
               </Link>

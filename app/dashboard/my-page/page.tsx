@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import SignupModal from '@/components/common/SignupModal';
 import LoginModal from '@/components/common/LoginModal';
 import Link from 'next/link';
 import AvatarImage from '@/components/common/AvatarImage';
+import { useTranslation } from 'react-i18next';
 
 interface ProfileData {
   nickname: string;
@@ -20,11 +21,6 @@ const FLAG_EMOJI_MAP: { [key: string]: string } = {
 };
 const getFlagEmoji = (v?: string) => FLAG_EMOJI_MAP[v || ''] || '';
 
-const MENU_ITEMS = [
-  { icon: '📝', label: 'My Posts', desc: 'Posts you\'ve published', href: '/dashboard/my-page/posts' },
-  { icon: '❤️', label: 'Liked Posts', desc: 'Posts you\'ve liked', href: '/dashboard/my-page/liked' },
-  { icon: '⚙️', label: 'Settings', desc: 'Profile, password, language', href: '/dashboard/my-page/settings' },
-];
 
 export default function MyPagePage() {
   const [isSignupOpen, setIsSignupOpen] = useState(false);
@@ -32,20 +28,49 @@ export default function MyPagePage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  const { t } = useTranslation('common');
+
+  const MENU_ITEMS = [
+    { icon: '📝', label: t('myPage.myPosts'), desc: t('myPage.myPostsDesc'), href: '/dashboard/my-page/posts' },
+    { icon: '❤️', label: t('myPage.likedPosts'), desc: t('myPage.likedPostsDesc'), href: '/dashboard/my-page/liked' },
+    { icon: '👥', label: t('myPage.friends'), desc: t('myPage.friendsDesc'), href: '/dashboard/my-page/friends' },
+    { icon: '⚙️', label: t('myPage.settings'), desc: t('myPage.settingsDesc'), href: '/dashboard/my-page/settings' },
+  ];
+
+
+  // request id ref: 최신 요청만 상태 반영
+  const reqRef = useRef(0);
 
   useEffect(() => {
+    const reqId = ++reqRef.current;
     const init = async () => {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setIsLoggedIn(false); setLoading(false); return; }
-      setIsLoggedIn(true);
-      const { data: profileData } = await supabase
-        .from('profile')
-        .select('nickname, flag, uselanguage, image_url')
-        .eq('id', session.user.id)
-        .single();
-      setProfile(profileData ?? null);
-      setLoading(false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (reqRef.current !== reqId) return;
+        if (!session) {
+          setIsLoggedIn(false);
+          // session 없음 → return 후 finally에서 loading 종료
+          return;
+        }
+        setIsLoggedIn(true);
+        const { data: profileData, error } = await supabase
+          .from('profile')
+          .select('nickname, flag, uselanguage, image_url')
+          .eq('id', session.user.id)
+          .single();
+        if (reqRef.current !== reqId) return;
+        if (error) {
+          console.error('[MyPage] profile fetch error:', error);
+        }
+        setProfile(profileData ?? null);
+      } catch (err) {
+        if (reqRef.current !== reqId) return;
+        console.error('[MyPage] init exception:', err);
+      } finally {
+        // 최신 요청만 loading 종료 — 비로그인 early return 포함 모든 경로에서 실행
+        if (reqRef.current === reqId) setLoading(false);
+      }
     };
     init();
   }, []);
@@ -58,7 +83,7 @@ export default function MyPagePage() {
 
   return (
     <div className="max-w-4xl space-y-6">
-      <h1 className="text-4xl font-bold">My Profile</h1>
+      <h1 className="text-4xl font-bold">{t('myPage.title')}</h1>
 
       {/* Profile Card */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6">
@@ -66,7 +91,7 @@ export default function MyPagePage() {
           <AvatarImage src={profile?.image_url} size={64} />
           <div className="flex-1">
             {loading ? (
-              <p className="text-gray-400 text-sm">Loading...</p>
+              <p className="text-gray-400 text-sm">{t('common.loading')}</p>
             ) : isLoggedIn && profile ? (
               <div>
                 <div className="flex items-center gap-2 mb-1">
@@ -76,20 +101,20 @@ export default function MyPagePage() {
                 {profile.uselanguage && <p className="text-gray-500 text-sm capitalize">{profile.uselanguage}</p>}
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">Sign in to view your profile</p>
+              <p className="text-gray-500 text-sm">{t('myPage.signInPrompt')}</p>
             )}
           </div>
         </div>
 
         <div className="flex gap-3">
           {loading ? (
-            <button disabled className="flex-1 bg-gray-200 text-white py-3 rounded-lg font-semibold cursor-not-allowed">Loading...</button>
+            <button disabled className="flex-1 bg-gray-200 text-white py-3 rounded-lg font-semibold cursor-not-allowed">{t('common.loading')}</button>
           ) : isLoggedIn ? (
-            <button onClick={handleLogout} className="flex-1 bg-[#9DB8A0] text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">Logout</button>
+            <button onClick={handleLogout} className="flex-1 bg-[#9DB8A0] text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">{t('auth.logout')}</button>
           ) : (
             <>
-              <button onClick={() => setIsLoginOpen(true)} className="flex-1 bg-[#9DB8A0] text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">Login</button>
-              <button onClick={() => setIsSignupOpen(true)} className="flex-1 bg-white text-[#9DB8A0] border-2 border-[#9DB8A0] py-3 rounded-lg font-semibold hover:bg-[#9DB8A0]/5 transition">Sign Up</button>
+              <button onClick={() => setIsLoginOpen(true)} className="flex-1 bg-[#9DB8A0] text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">{t('auth.login')}</button>
+              <button onClick={() => setIsSignupOpen(true)} className="flex-1 bg-white text-[#9DB8A0] border-2 border-[#9DB8A0] py-3 rounded-lg font-semibold hover:bg-[#9DB8A0]/5 transition">{t('auth.signUp')}</button>
             </>
           )}
         </div>

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import { useTranslation } from 'react-i18next';
+import '@/lib/i18n';
 
 type ResetStep = 1 | 2 | 3 | 4;
 
@@ -14,6 +16,7 @@ export default function ResetPasswordModal({
   isOpen,
   onClose,
 }: ResetPasswordModalProps) {
+  const { t } = useTranslation('common');
   const [step, setStep] = useState<ResetStep>(1);
   const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
@@ -28,7 +31,7 @@ export default function ResetPasswordModal({
 
   const handleEmailSubmit = async () => {
     if (!email.trim()) {
-      setError('Please enter your email.');
+      setError(t('resetPassword.enterEmail'));
       return;
     }
 
@@ -44,14 +47,14 @@ export default function ResetPasswordModal({
 
       if (sendError) {
         // Supabase는 미등록 이메일도 200을 반환하므로 일반 에러만 처리
-        setError('Failed to send verification code. Please try again.');
+        setError(t('resetPassword.sendFailed'));
         return;
       }
 
       setCodeSent(true);
       setStep(2);
     } catch {
-      setError('Failed to send verification code. Please try again.');
+      setError(t('resetPassword.sendFailed'));
     } finally {
       setLoading(false);
     }
@@ -59,12 +62,12 @@ export default function ResetPasswordModal({
 
   const handleVerificationSubmit = async () => {
     if (!verificationCode.trim()) {
-      setError('Please enter the verification code.');
+      setError(t('resetPassword.enterCode'));
       return;
     }
 
     if (verificationCode.length !== 8) {
-      setError('Verification code must be 8 digits.');
+      setError(t('resetPassword.codeLength'));
       return;
     }
 
@@ -81,9 +84,9 @@ export default function ResetPasswordModal({
 
       if (verifyError) {
         if (verifyError.message.toLowerCase().includes('expired')) {
-          setError('Verification code has expired. Please request a new one.');
+          setError(t('resetPassword.codeExpired'));
         } else {
-          setError('Invalid verification code. Please check and try again.');
+          setError(t('resetPassword.codeInvalid'));
         }
         return;
       }
@@ -91,7 +94,7 @@ export default function ResetPasswordModal({
       // 검증 성공 → verifyOtp 이 세션을 자동 설정함
       setStep(3);
     } catch {
-      setError('Verification failed. Please try again.');
+      setError(t('resetPassword.verifyFailed'));
     } finally {
       setLoading(false);
     }
@@ -99,12 +102,12 @@ export default function ResetPasswordModal({
 
   const handlePasswordReset = async () => {
     if (!newPassword.trim()) {
-      setError('Please enter a new password.');
+      setError(t('resetPassword.enterNewPassword'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('resetPassword.passwordMismatch'));
       return;
     }
 
@@ -118,7 +121,7 @@ export default function ResetPasswordModal({
       });
 
       if (updateError) {
-        setError(updateError.message || 'Failed to reset password. Please try again.');
+        setError(updateError.message || t('resetPassword.resetFailed'));
         return;
       }
 
@@ -126,7 +129,7 @@ export default function ResetPasswordModal({
       await supabase.auth.signOut();
       setStep(4);
     } catch {
-      setError('Failed to reset password. Please try again.');
+      setError(t('resetPassword.resetFailed'));
     } finally {
       setLoading(false);
     }
@@ -150,7 +153,7 @@ export default function ResetPasswordModal({
       <div className="bg-white rounded-2xl max-w-md w-full p-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold">Reset Password</h3>
+          <h3 className="text-xl font-bold">{t('resetPassword.title')}</h3>
           <button
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -176,7 +179,7 @@ export default function ResetPasswordModal({
         {step === 1 && (
           <div>
             <p className="text-sm text-gray-600 mb-4">
-              Enter the email associated with your account.
+              {t('resetPassword.step1Desc')}
             </p>
             <input
               type="email"
@@ -197,7 +200,7 @@ export default function ResetPasswordModal({
               disabled={loading || !email.trim()}
               className="w-full bg-[#9DB8A0] text-white py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50"
             >
-              {loading ? 'Sending...' : 'Send Verification Code'}
+              {loading ? t('resetPassword.sending') : t('resetPassword.sendCode')}
             </button>
           </div>
         )}
@@ -207,11 +210,11 @@ export default function ResetPasswordModal({
           <div>
             {codeSent && (
               <p className="text-sm text-[#9DB8A0] font-medium mb-3">
-                Verification code sent to <span className="font-semibold">{email}</span>.
+                {t('resetPassword.codeSentTo')} <span className="font-semibold">{email}</span>.
               </p>
             )}
             <p className="text-sm text-gray-600 mb-4">
-              Enter the 6-digit verification code sent to your email.
+              {t('resetPassword.step2Desc')}
             </p>
             <input
               type="text"
@@ -239,14 +242,14 @@ export default function ResetPasswordModal({
                 disabled={loading}
                 className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-300 disabled:opacity-50"
               >
-                Back
+                {t('resetPassword.back')}
               </button>
               <button
                 onClick={handleVerificationSubmit}
                 disabled={loading || verificationCode.length !== 8}
                 className="flex-1 bg-[#9DB8A0] text-white py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50"
               >
-                {loading ? 'Verifying...' : 'Verify'}
+                {loading ? t('resetPassword.verifying') : t('resetPassword.verify')}
               </button>
             </div>
           </div>
@@ -256,13 +259,13 @@ export default function ResetPasswordModal({
         {step === 3 && (
           <div>
             <p className="text-sm text-gray-600 mb-4">
-              Enter your new password.
+              {t('resetPassword.step3Desc')}
             </p>
 
             {/* New Password */}
             <div className="mb-4">
               <label className="block text-xs font-semibold mb-2">
-                New Password
+                {t('resetPassword.newPassword')}
               </label>
               <div className="relative">
                 <input
@@ -290,7 +293,7 @@ export default function ResetPasswordModal({
             {/* Confirm Password */}
             <div className="mb-4">
               <label className="block text-xs font-semibold mb-2">
-                Confirm Password
+                {t('resetPassword.confirmPassword')}
               </label>
               <div className="relative">
                 <input
@@ -330,14 +333,14 @@ export default function ResetPasswordModal({
                 disabled={loading}
                 className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-300 disabled:opacity-50"
               >
-                Back
+                {t('resetPassword.back')}
               </button>
               <button
                 onClick={handlePasswordReset}
                 disabled={loading || !newPassword || !confirmPassword}
                 className="flex-1 bg-[#9DB8A0] text-white py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50"
               >
-                {loading ? 'Resetting...' : 'Reset Password'}
+                {loading ? t('resetPassword.resetting') : t('resetPassword.resetBtn')}
               </button>
             </div>
           </div>
@@ -348,16 +351,16 @@ export default function ResetPasswordModal({
           <div className="text-center">
             <div className="text-4xl mb-4">✓</div>
             <h4 className="text-lg font-semibold mb-2">
-              Password Reset Successful
+              {t('resetPassword.successTitle')}
             </h4>
             <p className="text-sm text-gray-600 mb-6">
-              Your password has been successfully reset. Please log in with your new password.
+              {t('resetPassword.successDesc')}
             </p>
             <button
               onClick={handleClose}
               className="w-full bg-[#9DB8A0] text-white py-2 rounded-lg font-semibold hover:opacity-90"
             >
-              Close
+              {t('common.close')}
             </button>
           </div>
         )}

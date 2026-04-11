@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
+import '@/lib/i18n';
 
 interface PostItem {
   id: string;
@@ -15,35 +17,41 @@ interface PostItem {
 
 export default function LikedPostsPage() {
   const router = useRouter();
+  const { t } = useTranslation('common');
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { router.replace('/dashboard/my-page'); return; }
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { router.replace('/dashboard/my-page'); return; }
 
-      const { data } = await supabase
-        .from('post_like')
-        .select('post(id, title, like_count, comment_count, created_at)')
-        .eq('user_id', session.user.id);
+        const { data } = await supabase
+          .from('post_like')
+          .select('post(id, title, like_count, comment_count, created_at)')
+          .eq('user_id', session.user.id);
 
-      const likedPosts = (data ?? [])
-        .map((row: any) => (Array.isArray(row.post) ? row.post[0] : row.post))
-        .filter(Boolean);
+        const likedPosts = (data ?? [])
+          .map((row: any) => (Array.isArray(row.post) ? row.post[0] : row.post))
+          .filter(Boolean);
 
-      setPosts(likedPosts);
-      setLoading(false);
+        setPosts(likedPosts);
+      } catch (err) {
+        console.error('[LikedPosts] init exception:', err);
+      } finally {
+        setLoading(false);
+      }
     };
     init();
-  }, [router]);
+  }, []);
 
   return (
     <div className="max-w-4xl space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-800 transition text-xl">‹</button>
-        <h1 className="text-3xl font-bold">Liked Posts</h1>
+        <h1 className="text-3xl font-bold">{t('myPage.likedPosts')}</h1>
       </div>
 
       {loading ? (
@@ -55,9 +63,9 @@ export default function LikedPostsPage() {
       ) : posts.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 flex flex-col items-center justify-center py-16 text-center">
           <span className="text-4xl mb-3">❤️</span>
-          <p className="text-gray-500 text-sm">You haven&apos;t liked any posts yet.</p>
+          <p className="text-gray-500 text-sm">{t('myPage.noPostsLiked')}</p>
           <Link href="/dashboard/community" className="mt-4 text-sm text-[#9DB8A0] font-semibold hover:underline">
-            Explore Community →
+            {t('common.exploreCommunity')}
           </Link>
         </div>
       ) : (

@@ -4,6 +4,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import '@/lib/i18n'
 
 export default function DashboardLayout({
   children,
@@ -11,24 +13,18 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const [selectedLang, setSelectedLang] = useState<string>('en')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { t } = useTranslation('common')
 
   const menuItems = [
-    { icon: '🏠', label: 'Main', href: '/dashboard/home' },
-    { icon: '💬', label: 'Community', href: '/dashboard/community' },
-    { icon: '🛠', label: 'Services', href: '/dashboard/services' },
-    { icon: '❓', label: 'Help', href: '/dashboard/help' },
-    { icon: '👤', label: 'My page', href: '/dashboard/my-page' },
+    { icon: '🏠', label: t('nav.main'), href: '/dashboard/home' },
+    { icon: '💬', label: t('nav.community'), href: '/dashboard/community' },
+    { icon: '🛠', label: t('nav.services'), href: '/dashboard/services' },
+    { icon: '❓', label: t('nav.help'), href: '/dashboard/help' },
+    { icon: '👤', label: t('nav.myPage'), href: '/dashboard/my-page' },
   ]
+                                            
 
-  const languages = [
-    { code: 'en', label: '🇬🇧 English' },
-    { code: 'ko', label: '🇰🇷 한국어' },
-    { code: 'zh', label: '🇨🇳 中文' },
-    { code: 'vi', label: '🇻🇳 Tiếng Việt' },
-    { code: 'ja', label: '🇯🇵 日本語' },
-  ]
 
   return (
     <div className="min-h-screen bg-[#F7FAF8] flex">
@@ -73,20 +69,7 @@ export default function DashboardLayout({
           })}
         </nav>
 
-        {/* Language Selector */}
-        <div className="p-6 border-t border-gray-100">
-          <select
-            value={selectedLang}
-            onChange={(e) => setSelectedLang(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:border-[#9DB8A0]"
-          >
-            {languages.map((lang) => (
-              <option key={lang.code} value={lang.code}>
-                {lang.label}
-              </option>
-            ))}
-          </select>
-        </div>
+
       </aside>
 
       {/* Mobile Header */}
@@ -130,17 +113,7 @@ export default function DashboardLayout({
                 <span>{item.label}</span>
               </Link>
             ))}
-            <select
-              value={selectedLang}
-              onChange={(e) => setSelectedLang(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm mt-4 focus:outline-none focus:border-[#9DB8A0]"
-            >
-              {languages.map((lang) => (
-                <option key={lang.code} value={lang.code}>
-                  {lang.label}
-                </option>
-              ))}
-            </select>
+
           </nav>
         )}
       </div>
