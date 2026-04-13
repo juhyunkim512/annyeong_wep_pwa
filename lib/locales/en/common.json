@@ -206,7 +206,9 @@
     "unblocking": "Unblocking...",
     "loginToView": "Login to view your friends and blocked users.",
     "followingTab": "Following",
-    "noFollowing": "You're not following anyone yet."
+    "followersTab": "Followers",
+    "noFollowing": "You're not following anyone yet.",
+    "noFollowers": "No one is following you yet."
   },
   "report": {
     "title": "Report",
@@ -448,6 +450,36 @@
       "title": "Job Opportunities",
       "desc": "Browse part-time and full-time job listings"
     }
+  },
+  "consult": {
+    "applyBtn": "Apply for consultation",
+    "modalTitle": "Consultation Request",
+    "name": "Name",
+    "namePlaceholder": "Your full name",
+    "age": "Age",
+    "gender": "Gender",
+    "genderSelect": "Select",
+    "male": "Male",
+    "female": "Female",
+    "genderOther": "Other",
+    "email": "Email",
+    "sns": "SNS (optional)",
+    "snsIdPlaceholder": "Your {{sns}} ID",
+    "purpose": {
+      "label": "Purpose",
+      "shortStudy": "Short-term study",
+      "longStudy": "Long-term study",
+      "housing": "Housing",
+      "phone": "Phone plan",
+      "bank": "Bank account",
+      "job": "Employment"
+    },
+    "memo": "Additional notes",
+    "memoPlaceholder": "Any details or questions you'd like to share...",
+    "submit": "Submit application",
+    "privacyNote": "Your information is used only for consultation purposes.",
+    "successTitle": "Application received!",
+    "successDesc": "We'll get back to you within 1 business day."
   },
   "guide": {
     "hero": {

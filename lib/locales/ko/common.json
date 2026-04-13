@@ -206,7 +206,9 @@
     "unblocking": "해제 중...",
     "loginToView": "친구 및 차단 목록을 보려면 로그인하세요.",
     "followingTab": "팔로잉",
-    "noFollowing": "아직 팔로한 사용자가 없습니다."
+    "followersTab": "팔로워",
+    "noFollowing": "아직 팔로한 사용자가 없습니다.",
+    "noFollowers": "아직 팔로워가 없습니다."
   },
   "report": {
     "title": "신고하기",
@@ -448,8 +450,36 @@
       "title": "취업 기회",
       "desc": "아르바이트 및 정규직 구인 목록 보기"
     }
-  },
-  "guide": {
+  },  "consult": {
+    "applyBtn": "상담 신청하기",
+    "modalTitle": "상담 신청",
+    "name": "이름",
+    "namePlaceholder": "이름을 입력하세요",
+    "age": "나이",
+    "gender": "성별",
+    "genderSelect": "선택",
+    "male": "남성",
+    "female": "여성",
+    "genderOther": "기타",
+    "email": "이메일",
+    "sns": "SNS (선택)",
+    "snsIdPlaceholder": "{{sns}} 아이디",
+    "purpose": {
+      "label": "목적",
+      "shortStudy": "단기 유학",
+      "longStudy": "장기 유학",
+      "housing": "주거",
+      "phone": "휴대폰 요금제",
+      "bank": "은행 계좌",
+      "job": "취업"
+    },
+    "memo": "추가 내용",
+    "memoPlaceholder": "묻어보고 싶은 내용을 자유롭게 적어주세요...",
+    "submit": "신청하기",
+    "privacyNote": "입력하신 정보는 상담 목적으로만 사용됩니다.",
+    "successTitle": "신청이 접수되었습니다!",
+    "successDesc": "영업일 1일 이내로 답변드리겠습니다."
+  },  "guide": {
     "hero": {
       "title": "한국생활, 이제 ANNYEONG이 필수입니다",
       "subtitle": "사람에게는 물과 공기가 필수이듯이, 한국 생활에는 ANNYEONG이 선택이 아닌 필수입니다"

@@ -11,10 +11,10 @@ export default function SettingsPage() {
   const { t } = useTranslation('common');
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
+  // [수정] 언어 선택 항목 제거 — 유저가 변경 못하도록
   const SETTINGS_ITEMS = [
     { icon: '👤', label: t('settings.editProfile'), desc: t('settings.editProfileDesc'), href: '/dashboard/my-page/settings/profile' },
     { icon: '🔒', label: t('settings.resetPassword'), desc: t('settings.resetPasswordDesc'), href: '/dashboard/my-page/settings/password' },
-    { icon: '🌐', label: t('settings.chooseLanguage'), desc: t('settings.chooseLanguageHint'), href: '/dashboard/my-page/settings/language' },
   ];
 
   return (

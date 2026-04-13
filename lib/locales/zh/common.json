@@ -206,7 +206,9 @@
     "unblocking": "处理中...",
     "loginToView": "登录以查看好友和屏蔽用户。",
     "followingTab": "正在关注",
-    "noFollowing": "您还没有关注任何人。"
+    "followersTab": "粉丝",
+    "noFollowing": "您还没有关注任何人。",
+    "noFollowers": "还没有人关注您。"
   },
   "report": {
     "title": "举报",
@@ -448,8 +450,36 @@
       "title": "就业机会",
       "desc": "浏览兼职和全职职位列表"
     }
-  },
-  "guide": {
+  },  "consult": {
+    "applyBtn": "申请和询",
+    "modalTitle": "和询申请",
+    "name": "姓名",
+    "namePlaceholder": "请输入您的姓名",
+    "age": "年龄",
+    "gender": "性别",
+    "genderSelect": "请选择",
+    "male": "男",
+    "female": "女",
+    "genderOther": "其他",
+    "email": "电子邮件",
+    "sns": "SNS（可选）",
+    "snsIdPlaceholder": "{{sns}} 账号",
+    "purpose": {
+      "label": "目的",
+      "shortStudy": "短期留学",
+      "longStudy": "长期留学",
+      "housing": "住房",
+      "phone": "手机套餐",
+      "bank": "领取銀行账户",
+      "job": "就业"
+    },
+    "memo": "其他备注",
+    "memoPlaceholder": "请写下您想咨询的内容...",
+    "submit": "提交申请",
+    "privacyNote": "您的信息仅用于和询目的。",
+    "successTitle": "申请已收到！",
+    "successDesc": "我们将在 1 个工作日内回复您。"
+  },  "guide": {
     "hero": {
       "title": "在韩生活，ANNYEONG不可或缺",
       "subtitle": "正如人需要水和空气，ANNYEONG对韩国生活来说不是选择，而是必需品"

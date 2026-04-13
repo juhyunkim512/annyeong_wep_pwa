@@ -32,11 +32,26 @@ export default function WritePostModal({ isOpen, onClose, onRequireLogin }: Writ
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // [수정] 허용 MIME 타입 확대 + 10MB 제한 + 에러 로그
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+  const MAX_SIZE_MB = 10;
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-    const files = Array.from(e.target.files).slice(0, 3);
-    setImages(files);
-    setPreviews(files.map((f) => URL.createObjectURL(f)));
+    const selected = Array.from(e.target.files);
+    const valid = selected.filter((f) => {
+      if (!ALLOWED_TYPES.includes(f.type) && !f.name.match(/\.(heic|heif)$/i)) {
+        console.error('[WritePost] 차단된 MIME 타입:', f.type, f.name);
+        return false;
+      }
+      if (f.size > MAX_SIZE_MB * 1024 * 1024) {
+        console.error('[WritePost] 파일 커스 초과:', f.name, (f.size / 1024 / 1024).toFixed(1) + 'MB');
+        return false;
+      }
+      return true;
+    }).slice(0, 3);
+    setImages(valid);
+    setPreviews(valid.map((f) => URL.createObjectURL(f)));
   };
 
   const removeImage = (idx: number) => {
@@ -78,17 +93,20 @@ export default function WritePostModal({ isOpen, onClose, onRequireLogin }: Writ
       .single();
     if (profile?.uselanguage) uselanguage = profile.uselanguage;
 
-    // 이미지 먼저 업로드 → public URL 수집
+    // [수정] content-type 명시적 설정 + 업로드 실패 로그
     const imageUrls: string[] = [];
     for (const file of images) {
-      const ext = file.name.split('.').pop();
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
       const filePath = `${userId}/${crypto.randomUUID()}.${ext}`;
+      const contentType = file.type || `image/${ext}`;
       const { error: uploadErr } = await supabase.storage
         .from('post-images')
-        .upload(filePath, file);
+        .upload(filePath, file, { contentType });
       if (!uploadErr) {
         const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(filePath);
         imageUrls.push(urlData.publicUrl);
+      } else {
+        console.error('[WritePost] 이미지 업로드 실패:', uploadErr.message, file.name);
       }
     }
 
@@ -204,7 +222,7 @@ export default function WritePostModal({ isOpen, onClose, onRequireLogin }: Writ
               </span>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
                 multiple
                 className="hidden"
                 onChange={handleImageChange}

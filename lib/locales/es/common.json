@@ -206,7 +206,9 @@
     "unblocking": "Procesando...",
     "loginToView": "Inicia sesión para ver tus amigos y usuarios bloqueados.",
     "followingTab": "Siguiendo",
-    "noFollowing": "Aún no sigues a nadie."
+    "followersTab": "Seguidores",
+    "noFollowing": "Aún no sigues a nadie.",
+    "noFollowers": "Aún no tienes seguidores."
   },
   "report": {
     "title": "Reportar",
@@ -448,6 +450,36 @@
       "title": "Oportunidades de Empleo",
       "desc": "Explora ofertas de trabajo a tiempo parcial y completo"
     }
+  },
+  "consult": {
+    "applyBtn": "Solicitar consulta",
+    "modalTitle": "Solicitud de consulta",
+    "name": "Nombre",
+    "namePlaceholder": "Tu nombre completo",
+    "age": "Edad",
+    "gender": "Género",
+    "genderSelect": "Seleccionar",
+    "male": "Masculino",
+    "female": "Femenino",
+    "genderOther": "Otro",
+    "email": "Correo electrónico",
+    "sns": "SNS (opcional)",
+    "snsIdPlaceholder": "Tu ID de {{sns}}",
+    "purpose": {
+      "label": "Propósito",
+      "shortStudy": "Estudio a corto plazo",
+      "longStudy": "Estudio a largo plazo",
+      "housing": "Vivienda",
+      "phone": "Plan de teléfono",
+      "bank": "Cuenta bancaria",
+      "job": "Empleo"
+    },
+    "memo": "Notas adicionales",
+    "memoPlaceholder": "Escribe cualquier detalle o pregunta...",
+    "submit": "Enviar solicitud",
+    "privacyNote": "Tu información se usa únicamente para fines de consulta.",
+    "successTitle": "¡Solicitud recibida!",
+    "successDesc": "Te responderemos en 1 día hábil."
   },
   "guide": {
     "hero": {

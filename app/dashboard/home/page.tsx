@@ -34,11 +34,11 @@ async function callTranslate(
   contentId: string,
   sourceText: string,
   sourceLanguage: string,
+  targetLang: string,
   accessToken: string,
   signal: AbortSignal,
 ): Promise<{ text: string; isTranslated: boolean }> {
-  // 클라이언트 캐시 히트 → 즉시 반환
-  const cached = getClientTranslation(contentId, 'title')
+  const cached = getClientTranslation(contentId, 'title', targetLang)
   if (cached) return cached
   try {
     const res = await fetch('/api/translate', {
@@ -49,7 +49,7 @@ async function callTranslate(
     })
     if (!res.ok) return { text: sourceText, isTranslated: false }
     const result = await res.json()
-    setClientTranslation(contentId, 'title', result)
+    setClientTranslation(contentId, 'title', result, targetLang)
     return result
   } catch {
     return { text: sourceText, isTranslated: false }
@@ -147,7 +147,7 @@ export default function HomePage() {
             const toTranslate = unique.filter((p) => normalizeLang(p.language) !== userLang)
             if (toTranslate.length > 0) {
               const results = await Promise.all(
-                toTranslate.map((p) => callTranslate(p.id, p.title, p.language, accessToken, controller.signal))
+                toTranslate.map((p) => callTranslate(p.id, p.title, p.language, userLang, accessToken, controller.signal))
               )
               if (reqRef.current === reqId) {
                 const map: Record<string, string> = {}
@@ -167,15 +167,19 @@ export default function HomePage() {
     return () => controller.abort()
   }, [])
 
+  // [수정] 텍스트 기반 배너 제거 → 이미지 기반 3개로 교체
+  // banner3 클릭 시 /dashboard/community로 이동
   const banners = [
-    { title: t('home.banners.services.title'), description: t('home.banners.services.desc'), icon: '✨', isGuide: true, href: null, image: '/banner1.png' },
-    { title: t('home.banners.policy.title'), description: t('home.banners.policy.desc'), icon: '🏙️', isGuide: false, href: 'https://gauge-rope-63895960.figma.site', image: '/banner2.png' },
-    { title: t('home.banners.announcements.title'), description: t('home.banners.announcements.desc'), icon: '📢', isGuide: false, href: null, image: null },
+    { image: '/banner1.png', isGuide: true, href: null, communityLink: false },
+    { image: '/banner2.png', isGuide: false, href: 'https://gauge-rope-63895960.figma.site', communityLink: false },
+    { image: '/banner3.png', isGuide: false, href: null, communityLink: true },
   ]
 
   const handleBannerClick = () => {
     const banner = banners[currentBanner]
-    if (banner.isGuide) {
+    if (banner.communityLink) {
+      router.push('/dashboard/community')
+    } else if (banner.isGuide) {
       setIsGuideLangModalOpen(true)
     } else if (banner.href) {
       window.open(banner.href, '_blank', 'noopener,noreferrer')
@@ -205,62 +209,33 @@ export default function HomePage() {
 
   return (
     <div className="max-w-6xl space-y-8">
-      {/* Banner Carousel */}
+      {/* Banner Carousel — [수정] 이미지 전용, 텍스트 배너 제거 */}
       <section className="relative">
-        {banners[currentBanner].image ? (
-          /* 이미지 배너 */
-          <div
-            className="relative rounded-2xl overflow-hidden cursor-pointer active:opacity-90"
-            onClick={handleBannerClick}
+        <div
+          className="relative rounded-2xl overflow-hidden cursor-pointer active:opacity-90"
+          onClick={handleBannerClick}
+        >
+          <Image
+            src={banners[currentBanner].image}
+            alt={`banner ${currentBanner + 1}`}
+            width={1200}
+            height={400}
+            className="w-full object-cover"
+            priority
+          />
+          <button
+            onClick={(e) => { e.stopPropagation(); prevBanner() }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-black/20 hover:bg-black/30 rounded-full w-10 h-10 flex items-center justify-center transition text-white"
           >
-            <Image
-              src={banners[currentBanner].image!}
-              alt={banners[currentBanner].title}
-              width={1200}
-              height={400}
-              className="w-full object-cover"
-              priority
-            />
-            <button
-              onClick={(e) => { e.stopPropagation(); prevBanner() }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-black/20 hover:bg-black/30 rounded-full w-10 h-10 flex items-center justify-center transition text-white"
-            >
-              ←
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); nextBanner() }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-black/20 hover:bg-black/30 rounded-full w-10 h-10 flex items-center justify-center transition text-white"
-            >
-              →
-            </button>
-          </div>
-        ) : (
-          /* 일반 배너 — gradient */
-          <div
-            className="bg-gradient-to-r from-[#9DB8A0] to-[#7A9380] rounded-2xl p-8 text-white overflow-hidden relative"
-            onClick={handleBannerClick}
+            ←
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); nextBanner() }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-black/20 hover:bg-black/30 rounded-full w-10 h-10 flex items-center justify-center transition text-white"
           >
-            <button
-              onClick={(e) => { e.stopPropagation(); prevBanner() }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/20 hover:bg-white/30 rounded-full w-10 h-10 flex items-center justify-center transition"
-            >
-              ←
-            </button>
-            <div className="flex-1 mx-16 text-center">
-              <div className="text-5xl mb-3">{banners[currentBanner].icon}</div>
-              <h3 className="text-2xl font-bold mb-2">{banners[currentBanner].title}</h3>
-              <p className="text-white/90">{banners[currentBanner].description}</p>
-            </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); nextBanner() }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/20 hover:bg-white/30 rounded-full w-10 h-10 flex items-center justify-center transition"
-            >
-              →
-            </button>
-          </div>
-        )}
-
-        {/* Indicators */}
+            →
+          </button>
+        </div>
         <div className="flex justify-center gap-2 mt-4">
           {banners.map((_, idx) => (
             <button

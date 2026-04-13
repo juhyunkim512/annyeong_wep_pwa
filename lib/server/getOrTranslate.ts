@@ -19,6 +19,7 @@
 import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { v2 } from '@google-cloud/translate';
+import { llmTranslate } from '@/lib/translations/llm';
 
 const { Translate } = v2;
 
@@ -160,16 +161,26 @@ export async function getOrTranslateContent(
     };
   }
 
-  // 6. Google Cloud Translation 호출
+  // 6. LLM 번역 시도 → 실패 시 Google fallback
   let translatedText = sourceText;
-  try {
-    const client = getTranslateClient();
-    const [result] = await client.translate(sourceText, tgtLang);
-    translatedText = Array.isArray(result) ? result[0] : result;
-  } catch (err) {
-    console.error('[getOrTranslateContent] Google Translation error:', err);
-    // 에러 시 원문 그대로 반환 (서비스 중단 방지)
-    return { text: sourceText, isTranslated: false, sourceLanguage: srcLang, targetLanguage: tgtLang };
+  let usedProvider: 'llm' | 'google' = 'llm';
+
+  const llmResult = await llmTranslate(sourceText, srcLang, tgtLang);
+
+  if (llmResult) {
+    translatedText = llmResult;
+  } else {
+    // LLM 실패 → Google Cloud Translation fallback
+    console.warn('[getOrTranslateContent] LLM failed, falling back to Google');
+    usedProvider = 'google';
+    try {
+      const client = getTranslateClient();
+      const [result] = await client.translate(sourceText, tgtLang);
+      translatedText = Array.isArray(result) ? result[0] : result;
+    } catch (err) {
+      console.error('[getOrTranslateContent] Google Translation error:', err);
+      return { text: sourceText, isTranslated: false, sourceLanguage: srcLang, targetLanguage: tgtLang };
+    }
   }
 
   // 7. 캐시 저장 (upsert — hash 기반 누적, 기존 row 삭제 없음)
@@ -185,7 +196,7 @@ export async function getOrTranslateContent(
         target_language: tgtLang,
         source_text_hash: hash,
         translated_text: translatedText,
-        provider: 'google',
+        provider: usedProvider,
         created_at: now,
         updated_at: now,
       },

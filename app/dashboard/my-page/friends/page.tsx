@@ -36,12 +36,22 @@ interface FollowingUser {
   image_url?: string;
 }
 
+// [추가] Follower 인터페이스
+interface FollowerUser {
+  follower_id: string;
+  nickname: string;
+  flag?: string;
+  image_url?: string;
+}
+
 export default function FriendsPage() {
   const router = useRouter();
   const { t } = useTranslation('common');
-  const [tab, setTab] = useState<'following' | 'blocked'>('following');
+  // [수정] followers 탭 추가
+  const [tab, setTab] = useState<'following' | 'followers' | 'blocked'>('following');
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
   const [followingUsers, setFollowingUsers] = useState<FollowingUser[]>([]);
+  const [followerUsers, setFollowerUsers] = useState<FollowerUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -101,6 +111,40 @@ export default function FriendsPage() {
           setFollowingUsers(following);
         } else if (!controller.signal.aborted) {
           setFollowingUsers([]);
+        }
+
+        // [추가] Followers — following_id = 현재 유저인 row 조회
+        const { data: followerRows, error: followerError } = await supabase
+          .from('user_follow')
+          .select('follower_id')
+          .eq('following_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (followerError) {
+          console.error('[Friends] followers 조회 실패:', followerError);
+        }
+
+        if (!controller.signal.aborted && followerRows && followerRows.length > 0) {
+          const followerIds = followerRows.map((r: any) => r.follower_id);
+          const { data: followerProfileRows } = await supabase
+            .from('profile')
+            .select('id, nickname, flag, image_url, is_deleted')
+            .in('id', followerIds);
+
+          const followerProfileMap: Record<string, any> = {};
+          (followerProfileRows || []).forEach((p: any) => { followerProfileMap[p.id] = p; });
+
+          const followers: FollowerUser[] = followerRows
+            .filter((row: any) => !followerProfileMap[row.follower_id]?.is_deleted)
+            .map((row: any) => ({
+              follower_id: row.follower_id,
+              nickname: followerProfileMap[row.follower_id]?.nickname || 'Unknown',
+              flag: followerProfileMap[row.follower_id]?.flag,
+              image_url: followerProfileMap[row.follower_id]?.image_url,
+            }));
+          setFollowerUsers(followers);
+        } else if (!controller.signal.aborted) {
+          setFollowerUsers([]);
         }
 
         const { data: blockRows } = await supabase
@@ -171,6 +215,17 @@ export default function FriendsPage() {
         >
           {t('friends.followingTab')}
         </button>
+        {/* [추가] Followers 탭 */}
+        <button
+          className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${
+            tab === 'followers'
+              ? 'border-[#9DB8A0] text-[#9DB8A0]'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+          onClick={() => setTab('followers')}
+        >
+          {t('friends.followersTab')}
+        </button>
         <button
           className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition ${
             tab === 'blocked'
@@ -211,6 +266,34 @@ export default function FriendsPage() {
                   key={u.following_id}
                   className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-gray-50 transition"
                   onClick={() => setProfileModalUserId(u.following_id)}
+                >
+                  <AvatarImage src={u.image_url} size={44} />
+                  <div className="flex-1 min-w-0">
+                    <span className="font-semibold text-gray-800">{u.nickname}</span>
+                    {u.flag && (
+                      <span className="ml-2 text-lg">{getFlagEmoji(u.flag)}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : tab === 'followers' ? (
+        // [추가] Followers 목록
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          {followerUsers.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="text-4xl mb-3">👥</div>
+              <p className="text-gray-400 text-sm">{t('friends.noFollowers')}</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {followerUsers.map((u) => (
+                <div
+                  key={u.follower_id}
+                  className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-gray-50 transition"
+                  onClick={() => setProfileModalUserId(u.follower_id)}
                 >
                   <AvatarImage src={u.image_url} size={44} />
                   <div className="flex-1 min-w-0">

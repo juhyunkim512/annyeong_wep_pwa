@@ -206,7 +206,9 @@
     "unblocking": "Đang xử lý...",
     "loginToView": "Đăng nhập để xem bạn bè và người dùng bị chặn.",
     "followingTab": "Đang theo dõi",
-    "noFollowing": "Bạn chưa theo dõi ai cả."
+    "followersTab": "Người theo dõi",
+    "noFollowing": "Bạn chưa theo dõi ai cả.",
+    "noFollowers": "Chưa có ai theo dõi bạn."
   },
   "report": {
     "title": "Báo cáo",
@@ -448,8 +450,36 @@
       "title": "Cơ hội việc làm",
       "desc": "Khám phá danh sách việc làm bán thời gian và toàn thời gian"
     }
-  },
-  "guide": {
+  },  "consult": {
+    "applyBtn": "Đăng ký tư vấn",
+    "modalTitle": "Yêu cầu tư vấn",
+    "name": "Họ tên",
+    "namePlaceholder": "Nhập họ tên của bạn",
+    "age": "Tuổi",
+    "gender": "Giới tính",
+    "genderSelect": "Chọn",
+    "male": "Nam",
+    "female": "Nữ",
+    "genderOther": "Khác",
+    "email": "Email",
+    "sns": "SNS (tùy chọn)",
+    "snsIdPlaceholder": "ID {{sns}} của bạn",
+    "purpose": {
+      "label": "Mục đích",
+      "shortStudy": "Du học ngắn hạn",
+      "longStudy": "Du học dài hạn",
+      "housing": "Nhà ở",
+      "phone": "Gói cước điện thoại",
+      "bank": "Tài khoản ngân hàng",
+      "job": "Việc làm"
+    },
+    "memo": "Ghi chú thêm",
+    "memoPlaceholder": "Nhập nội dung bạn muốn hỏi...",
+    "submit": "Gửsi đơn",
+    "privacyNote": "Thông tin của bạn chỉ được dùng cho mục đích tư vấn.",
+    "successTitle": "Nhận đơn thành công!",
+    "successDesc": "Chúng tôi sẽ phản hồi trong vòng 1 ngày làm việc."
+  },  "guide": {
     "hero": {
       "title": "Sống ở Hàn Quốc, ANNYEONG là điều không thể thiếu",
       "subtitle": "Giống như con người cần nước và không khí, ANNYEONG không phải là lựa chọn mà là điều bắt buộc khi sống ở Hàn Quốc"

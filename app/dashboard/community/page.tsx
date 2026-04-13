@@ -36,10 +36,11 @@ async function callTranslate(
   contentId: string,
   sourceText: string,
   sourceLanguage: string,
+  targetLang: string,
   accessToken: string,
   signal: AbortSignal,
 ): Promise<{ text: string; isTranslated: boolean }> {
-  const cached = getClientTranslation(contentId, 'title')
+  const cached = getClientTranslation(contentId, 'title', targetLang)
   if (cached) return cached
   try {
     const res = await fetch('/api/translate', {
@@ -50,7 +51,7 @@ async function callTranslate(
     });
     if (!res.ok) return { text: sourceText, isTranslated: false };
     const result = await res.json()
-    setClientTranslation(contentId, 'title', result)
+    setClientTranslation(contentId, 'title', result, targetLang)
     return result
   } catch {
     return { text: sourceText, isTranslated: false };
@@ -147,7 +148,7 @@ export default function CommunityPage() {
                 .slice(0, 30);
               if (toTranslate.length > 0) {
                 const results = await Promise.all(
-                  toTranslate.map((p) => callTranslate(p.id, p.title, p.language, accessToken, controller.signal))
+                  toTranslate.map((p) => callTranslate(p.id, p.title, p.language, userLang, accessToken, controller.signal))
                 );
                 if (!controller.signal.aborted) {
                   const map: Record<string, string> = {};

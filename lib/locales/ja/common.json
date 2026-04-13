@@ -206,7 +206,9 @@
     "unblocking": "処理中...",
     "loginToView": "フレンドとブロック一覧を見るにはログインしてください。",
     "followingTab": "フォロー中",
-    "noFollowing": "まだ誰もフォローしていません。"
+    "followersTab": "フォロワー",
+    "noFollowing": "まだ誰もフォローしていません。",
+    "noFollowers": "まだフォロワーがいません。"
   },
   "report": {
     "title": "報告",
@@ -448,6 +450,36 @@
       "title": "就職機会",
       "desc": "パートタイム・フルタイムの求人を閲覧"
     }
+  },
+  "consult": {
+    "applyBtn": "相談申し込む",
+    "modalTitle": "相談申し込み",
+    "name": "お名前",
+    "namePlaceholder": "お名前を入力してください",
+    "age": "年齢",
+    "gender": "性別",
+    "genderSelect": "選択",
+    "male": "男性",
+    "female": "女性",
+    "genderOther": "その他",
+    "email": "メールアドレス",
+    "sns": "SNS（任意）",
+    "snsIdPlaceholder": "{{sns}} ID",
+    "purpose": {
+      "label": "目的",
+      "shortStudy": "短期留学",
+      "longStudy": "長期留学",
+      "housing": "住居",
+      "phone": "携帯電話プラン",
+      "bank": "銀行口座開設",
+      "job": "就職"
+    },
+    "memo": "備考",
+    "memoPlaceholder": "相談内容やご質問をお書きください...",
+    "submit": "申し込む",
+    "privacyNote": "入力した情報は相談目的のみに使用します。",
+    "successTitle": "申し込みを受け付けました！",
+    "successDesc": "1営業日以内にご連絡いたします。"
   },
   "guide": {
     "hero": {

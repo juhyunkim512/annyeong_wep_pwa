@@ -48,10 +48,21 @@ export default function ProfileSettingsPage() {
     setTimeout(() => setMsg(''), 2500);
   };
 
-  // 사진 선택 → 미리보기만 즉시 반영, DB 저장 안 함
+  // [수정] MIME 타입 + 10MB 제한 + 에러 로그
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     if (!file) return;
+    if (!ALLOWED_TYPES.includes(file.type) && !file.name.match(/\.(heic|heif)$/i)) {
+      console.error('[Profile] 차단된 MIME 타입:', file.type, file.name);
+      showMsg('Unsupported image format', true);
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      console.error('[Profile] 파일 용량 초과:', (file.size / 1024 / 1024).toFixed(1) + 'MB');
+      showMsg('Image must be under 10MB', true);
+      return;
+    }
     setAvatarFile(file);
     setPreviewUrl(URL.createObjectURL(file));
   };
@@ -67,16 +78,17 @@ export default function ProfileSettingsPage() {
 
     // 사진이 새로 선택됐으면 매번 고유한 파일명으로 업로드
     if (avatarFile) {
-      const ext = avatarFile.name.split('.').pop();
+      const ext = avatarFile.name.split('.').pop()?.toLowerCase() ?? 'jpg';
       const filePath = `${userId}/${Date.now()}-${avatarFile.name}`;
+      const contentType = avatarFile.type || `image/${ext}`;
       const { error: uploadErr } = await supabase.storage
         .from('profile-images')
-        .upload(filePath, avatarFile, { upsert: false });
+        .upload(filePath, avatarFile, { upsert: false, contentType });
       if (!uploadErr) {
         const { data: urlData } = supabase.storage.from('profile-images').getPublicUrl(filePath);
-        // 캐시 버스팅: URL에 타임스탬프 붙이지 않고 public URL 그대로 사용
         newImageUrl = urlData.publicUrl;
       } else {
+        console.error('[Profile] 이미지 업로드 실패:', uploadErr.message, avatarFile.name);
         showMsg(t('settings.imageUploadFailed'), true);
         setSaving(false);
         return;

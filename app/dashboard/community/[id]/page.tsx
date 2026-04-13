@@ -30,10 +30,11 @@ async function callTranslate(
   fieldName: 'title' | 'content',
   sourceText: string,
   sourceLanguage: string,
+  targetLang: string,
   accessToken: string,
   signal: AbortSignal,
 ): Promise<{ text: string; isTranslated: boolean }> {
-  const cached = getClientTranslation(contentId, fieldName)
+  const cached = getClientTranslation(contentId, fieldName, targetLang)
   if (cached) return cached
   try {
     const res = await fetch('/api/translate', {
@@ -47,7 +48,7 @@ async function callTranslate(
     });
     if (!res.ok) return { text: sourceText, isTranslated: false };
     const result = await res.json()
-    setClientTranslation(contentId, fieldName, result)
+    setClientTranslation(contentId, fieldName, result, targetLang)
     return result
   } catch {
     return { text: sourceText, isTranslated: false };
@@ -231,8 +232,8 @@ export default function PostDetailPage() {
               const accessToken = _session.access_token;
               if (userLangCode !== postLangCode) {
                 const [titleRes, contentRes] = await Promise.all([
-                  callTranslate('post', _post.id, 'title', _post.title, _post.language, accessToken, controller.signal),
-                  callTranslate('post', _post.id, 'content', _post.content, _post.language, accessToken, controller.signal),
+                  callTranslate('post', _post.id, 'title', _post.title, _post.language, userLangCode, accessToken, controller.signal),
+                  callTranslate('post', _post.id, 'content', _post.content, _post.language, userLangCode, accessToken, controller.signal),
                 ]);
                 if (!controller.signal.aborted) {
                   setTranslatedPost({
@@ -245,7 +246,7 @@ export default function PostDetailPage() {
                 if (_comments.length > 0 && !controller.signal.aborted) {
                   const commentResults = await Promise.all(
                     _comments.map((c) =>
-                      callTranslate('comment', c.id, 'content', c.content, c.language ?? _post.language, accessToken, controller.signal)
+                      callTranslate('comment', c.id, 'content', c.content, c.language ?? _post.language, userLangCode, accessToken, controller.signal)
                     )
                   );
                   if (!controller.signal.aborted) {
@@ -289,14 +290,18 @@ export default function PostDetailPage() {
     }
     let imageUrl = null;
     if (commentImage) {
-      const fileExt = commentImage.name.split('.').pop();
+      // [수정] content-type 명시적 설정 + 실패 로그
+      const fileExt = commentImage.name.split('.').pop()?.toLowerCase() ?? 'jpg';
       const filePath = `comment-images/${postId}/${crypto.randomUUID()}.${fileExt}`;
+      const contentType = commentImage.type || `image/${fileExt}`;
       const { error: uploadError } = await supabase.storage
         .from('comment-images')
-        .upload(filePath, commentImage);
+        .upload(filePath, commentImage, { contentType });
       if (!uploadError) {
         const { data: urlData } = supabase.storage.from('comment-images').getPublicUrl(filePath);
         imageUrl = urlData.publicUrl;
+      } else {
+        console.error('[Comment] 이미지 업로드 실패:', uploadError.message, commentImage.name);
       }
     }
     await supabase.from("comment").insert({
@@ -304,6 +309,8 @@ export default function PostDetailPage() {
       author_id: sessionData.session.user.id,
       content: commentText,
       image_url: imageUrl,
+      // [수정] 댓글 작성자의 언어 저장 → 번역 sourceLanguage로 사용
+      language: (await supabase.from('profile').select('uselanguage').eq('id', sessionData.session.user.id).maybeSingle()).data?.uselanguage ?? 'english',
     });
     setCommentText("");
     setCommentImage(null);
@@ -817,7 +824,7 @@ export default function PostDetailPage() {
                   <span>{t('community.picture')}</span>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
                     className="hidden"
                     onChange={(e) => {
                       if (e.target.files && e.target.files[0]) {
