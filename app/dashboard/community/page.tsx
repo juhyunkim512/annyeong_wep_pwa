@@ -7,6 +7,7 @@ import LoginModal from '@/components/common/LoginModal';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
+import { getClientTranslation, setClientTranslation } from '@/lib/utils/clientTranslateCache';
 
 interface Post {
   id: string;
@@ -38,6 +39,8 @@ async function callTranslate(
   accessToken: string,
   signal: AbortSignal,
 ): Promise<{ text: string; isTranslated: boolean }> {
+  const cached = getClientTranslation(contentId, 'title')
+  if (cached) return cached
   try {
     const res = await fetch('/api/translate', {
       method: 'POST',
@@ -46,7 +49,9 @@ async function callTranslate(
       signal,
     });
     if (!res.ok) return { text: sourceText, isTranslated: false };
-    return await res.json();
+    const result = await res.json()
+    setClientTranslation(contentId, 'title', result)
+    return result
   } catch {
     return { text: sourceText, isTranslated: false };
   }
@@ -99,11 +104,16 @@ export default function CommunityPage() {
       setLoading(true);
       setError('');
       try {
-        // 전체 posts 1회 fetch — category/search는 렌더 단계 로컬 필터로 처리
-        const { data, error } = await supabase
+        // category는 DB에서 필터, limit 50
+        let query = supabase
           .from('post')
           .select('id, title, category, language, author_id, created_at, like_count, comment_count, public_profile(nickname)')
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .limit(50);
+        if (activeCategory) {
+          query = query.eq('category', activeCategory);
+        }
+        const { data, error } = await query;
 
         if (controller.signal.aborted) return;
 
@@ -117,8 +127,10 @@ export default function CommunityPage() {
             nickname: Array.isArray(p.public_profile) ? p.public_profile[0]?.nickname : p.public_profile?.nickname ?? null,
           }));
           setPosts(normalized);
+          // ✅ 포스트 로딩 즉시 해제 — 번역은 백그라운드에서 진행
+          setLoading(false);
 
-          // ── 제목 번역 (최대 30개) ─────────────────────────
+          // ── 제목 번역 (백그라운드, 로딩 이미 해제 후) ───────────────────
           if (!controller.signal.aborted) {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
@@ -151,12 +163,12 @@ export default function CommunityPage() {
         setError('Failed to load posts');
         setPosts([]);
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        setLoading(false);
       }
     };
     fetchPosts();
     return () => controller.abort();
-  }, [refreshCount]);
+  }, [refreshCount, activeCategory]);
 
   const handleWriteClick = () => {
     if (!isLoggedIn) {
@@ -166,7 +178,7 @@ export default function CommunityPage() {
     }
   };
 
-  const filteredPosts = posts.filter((p) => !activeCategory || p.category === activeCategory);
+  const filteredPosts = posts;
 
   return (
     <div className="max-w-4xl space-y-6">

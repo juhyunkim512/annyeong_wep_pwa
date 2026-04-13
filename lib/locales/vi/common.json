@@ -118,7 +118,9 @@
       },
       "services": {
         "title": "Dịch vụ cho người quốc tế",
-        "desc": "Khám phá tất cả dịch vụ ANNYEONG"
+        "desc": "Khám phá tất cả dịch vụ ANNYEONG",
+        "tapHint": "Nhấn để bắt đầu",
+        "langHint": "Chọn ngôn ngữ để xem hướng dẫn"
       },
       "announcements": {
         "title": "Thông báo ANNYEONG",
@@ -445,6 +447,44 @@
     "job": {
       "title": "Cơ hội việc làm",
       "desc": "Khám phá danh sách việc làm bán thời gian và toàn thời gian"
+    }
+  },
+  "guide": {
+    "hero": {
+      "title": "Sống ở Hàn Quốc, ANNYEONG là điều không thể thiếu",
+      "subtitle": "Giống như con người cần nước và không khí, ANNYEONG không phải là lựa chọn mà là điều bắt buộc khi sống ở Hàn Quốc"
+    },
+    "why": {
+      "title": "Lý do bạn phải dùng ANNYEONG khi sống ở Hàn Quốc",
+      "item1": "Câu trả lời thật từ người thật, không phải AI",
+      "item2": "Thông tin thời gian thực, không phải bài đăng cũ trên mạng xã hội",
+      "item3": "Dịch vụ được tạo ra dành riêng cho người nước ngoài tại Hàn Quốc",
+      "item4": "Dịch thuật thời gian thực + cộng đồng — miễn phí 100%",
+      "item5": "Đăng bài từ 9h–18h, không có trả lời trong 10 phút sẽ được thưởng"
+    },
+    "language": {
+      "title": "Ngôn ngữ & Dịch thuật",
+      "item1": "Sau khi đăng ký, tất cả bài viết và bình luận được dịch theo thời gian thực",
+      "item2": "Nhận thông báo đẩy để cập nhật nhanh hơn và tiện lợi hơn",
+      "item3": "Chỉ 30 giây để bắt đầu cuộc sống tốt hơn ở Hàn Quốc"
+    },
+    "app": {
+      "title": "Dùng như một ứng dụng",
+      "item1": "Thêm vào màn hình chính và dùng như ứng dụng gốc",
+      "item2": "Truy cập nhanh hơn và tiện lợi hơn",
+      "installBtn": "Xem cách cài đặt"
+    },
+    "langModal": {
+      "title": "Chọn ngôn ngữ của bạn"
+    },
+    "deviceModal": {
+      "title": "Chọn thiết bị của bạn",
+      "iosDesc": "Thêm vào màn hình chính qua Safari",
+      "androidDesc": "Thêm vào màn hình chính qua Chrome"
+    },
+    "cta": {
+      "home": "Về trang chủ",
+      "signUp": "Đăng ký"
     }
   }
 }

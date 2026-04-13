@@ -118,7 +118,9 @@
       },
       "services": {
         "title": "国际人士服务",
-        "desc": "探索所有ANNYEONG服务"
+        "desc": "探索所有ANNYEONG服务",
+        "tapHint": "点击开始",
+        "langHint": "请选择查看指南的语言"
       },
       "announcements": {
         "title": "ANNYEONG公告",
@@ -445,6 +447,44 @@
     "job": {
       "title": "就业机会",
       "desc": "浏览兼职和全职职位列表"
+    }
+  },
+  "guide": {
+    "hero": {
+      "title": "在韩生活，ANNYEONG不可或缺",
+      "subtitle": "正如人需要水和空气，ANNYEONG对韩国生活来说不是选择，而是必需品"
+    },
+    "why": {
+      "title": "在韩国生活，必须使用ANNYEONG的理由",
+      "item1": "来自真实用户的真实解答，而非AI",
+      "item2": "实时信息，而非SNS上过时的帖子",
+      "item3": "专为在韩外国人打造的服务",
+      "item4": "实时翻译＋社区，100%免费",
+      "item5": "上午9点至下午6点发帖，10分钟内无回复将获得奖励"
+    },
+    "language": {
+      "title": "语言 & 翻译",
+      "item1": "注册后，社区帖子＋评论全部实时翻译",
+      "item2": "接收推送通知，更快更便捷地使用",
+      "item3": "30秒开启更好的韩国生活"
+    },
+    "app": {
+      "title": "像使用App一样",
+      "item1": "添加到主屏幕，像原生App一样使用",
+      "item2": "访问更快更方便",
+      "installBtn": "查看安装方法"
+    },
+    "langModal": {
+      "title": "请选择语言"
+    },
+    "deviceModal": {
+      "title": "请选择设备",
+      "iosDesc": "通过Safari添加到主屏幕",
+      "androidDesc": "通过Chrome添加到主屏幕"
+    },
+    "cta": {
+      "home": "前往首页",
+      "signUp": "注册"
     }
   }
 }

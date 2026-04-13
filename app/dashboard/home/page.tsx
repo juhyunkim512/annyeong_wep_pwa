@@ -3,8 +3,21 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import Link from 'next/link'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import '@/lib/i18n'
+import { type AppLang } from '@/lib/i18n'
+import { getClientTranslation, setClientTranslation } from '@/lib/utils/clientTranslateCache'
+
+const GUIDE_LANGS: { code: AppLang; flag: string; label: string }[] = [
+  { code: 'en', flag: '🇺🇸', label: 'English' },
+  { code: 'ko', flag: '🇰🇷', label: '한국어' },
+  { code: 'ja', flag: '🇯🇵', label: '日本語' },
+  { code: 'zh', flag: '🇨🇳', label: '中文' },
+  { code: 'vi', flag: '🇻🇳', label: 'Tiếng Việt' },
+  { code: 'es', flag: '🇪🇸', label: 'Español' },
+]
 
 // ── 번역 헬퍼 (모듈 레벨) ─────────────────────────
 const LANG_MAP: Record<string, string> = {
@@ -24,6 +37,9 @@ async function callTranslate(
   accessToken: string,
   signal: AbortSignal,
 ): Promise<{ text: string; isTranslated: boolean }> {
+  // 클라이언트 캐시 히트 → 즉시 반환
+  const cached = getClientTranslation(contentId, 'title')
+  if (cached) return cached
   try {
     const res = await fetch('/api/translate', {
       method: 'POST',
@@ -32,7 +48,9 @@ async function callTranslate(
       signal,
     })
     if (!res.ok) return { text: sourceText, isTranslated: false }
-    return await res.json()
+    const result = await res.json()
+    setClientTranslation(contentId, 'title', result)
+    return result
   } catch {
     return { text: sourceText, isTranslated: false }
   }
@@ -49,7 +67,9 @@ interface PostSummary {
 
 export default function HomePage() {
   const { t } = useTranslation('common')
+  const router = useRouter()
   const [currentBanner, setCurrentBanner] = useState(0)
+  const [isGuideLangModalOpen, setIsGuideLangModalOpen] = useState(false)
 
   const timeAgo = (dateStr: string) => {
     const diff = (Date.now() - new Date(dateStr).getTime()) / 1000
@@ -75,6 +95,7 @@ export default function HomePage() {
       setPostsLoading(true)
       try {
         // Recent + Trending 병렬 fetch
+        const threeDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
         const [{ data: recent }, { data: trending }] = await Promise.all([
           supabase
             .from('post')
@@ -84,7 +105,9 @@ export default function HomePage() {
           supabase
             .from('post')
             .select('id, title, language, created_at, like_count, public_profile(nickname)')
-            .gte('like_count', 10)
+            .gte('created_at', threeDaysAgo)
+            .gte('like_count', 1)
+            .order('like_count', { ascending: false })
             .order('created_at', { ascending: false })
             .limit(3),
         ])
@@ -105,8 +128,10 @@ export default function HomePage() {
         const normalizedTrending = normalize(trending ?? [])
         setRecentPosts(normalizedRecent)
         setTrendingPosts(normalizedTrending)
+        // ✅ 포스트 로딩 즉시 해제 — 번역은 백그라운드에서 진행
+        if (reqRef.current === reqId) setPostsLoading(false)
 
-        // ── 제목 번역 ───────────────────────────────────
+        // ── 제목 번역 (로딩 해제 후 백그라운드) ──────────
         const { data: { session } } = await supabase.auth.getSession()
         if (session && reqRef.current === reqId) {
           const { data: userProfile } = await supabase
@@ -144,10 +169,21 @@ export default function HomePage() {
   }, [])
 
   const banners = [
-    { title: t('home.banners.services.title'), description: t('home.banners.services.desc'), icon: '✨' },
-    { title: t('home.banners.policy.title'), description: t('home.banners.policy.desc'), icon: '🏙️' },
-    { title: t('home.banners.announcements.title'), description: t('home.banners.announcements.desc'), icon: '📢' },
+    { title: t('home.banners.services.title'), description: t('home.banners.services.desc'), icon: '✨', isGuide: true },
+    { title: t('home.banners.policy.title'), description: t('home.banners.policy.desc'), icon: '🏙️', isGuide: false },
+    { title: t('home.banners.announcements.title'), description: t('home.banners.announcements.desc'), icon: '📢', isGuide: false },
   ]
+
+  const handleBannerClick = () => {
+    if (banners[currentBanner].isGuide) {
+      setIsGuideLangModalOpen(true)
+    }
+  }
+
+  const handleGuideLangSelect = (code: AppLang) => {
+    setIsGuideLangModalOpen(false)
+    router.push(`/guide?lang=${code}`)
+  }
 
   const nextBanner = () => {
     setCurrentBanner((prev) => (prev + 1) % banners.length)
@@ -157,7 +193,7 @@ export default function HomePage() {
     setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)
   }
 
-  // 2초마다 자동 슬라이드 — cleanup으로 메모리 누수 방지
+  // 3초마다 자동 슬라이드
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentBanner((prev) => (prev + 1) % banners.length)
@@ -169,29 +205,64 @@ export default function HomePage() {
     <div className="max-w-6xl space-y-8">
       {/* Banner Carousel */}
       <section className="relative">
-        <div className="bg-gradient-to-r from-[#9DB8A0] to-[#7A9380] rounded-2xl p-8 text-white overflow-hidden">
-          <div className="flex items-center justify-between">
+        {banners[currentBanner].isGuide ? (
+          /* Guide 배너 — 이미지 */
+          <div
+            className="relative rounded-2xl overflow-hidden cursor-pointer active:opacity-90"
+            onClick={handleBannerClick}
+          >
+            <Image
+              src="/banner1.png"
+              alt={banners[currentBanner].title}
+              width={1200}
+              height={400}
+              className="w-full object-cover"
+              priority
+            />
+            {/* 중앙 하단 텍스트 */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 text-center pointer-events-none">
+              <span className="bg-black/30 backdrop-blur-sm text-white text-xl font-semibold px-6 py-2 rounded-full whitespace-nowrap">
+                How to use ANNYEONG
+              </span>
+            </div>
             <button
-              onClick={prevBanner}
-              className="absolute left-4 z-10 bg-white/20 hover:bg-white/30 rounded-full w-10 h-10 flex items-center justify-center transition"
+              onClick={(e) => { e.stopPropagation(); prevBanner() }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-black/20 hover:bg-black/30 rounded-full w-10 h-10 flex items-center justify-center transition text-white"
             >
               ←
             </button>
-
+            <button
+              onClick={(e) => { e.stopPropagation(); nextBanner() }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-black/20 hover:bg-black/30 rounded-full w-10 h-10 flex items-center justify-center transition text-white"
+            >
+              →
+            </button>
+          </div>
+        ) : (
+          /* 일반 배너 — gradient */
+          <div
+            className="bg-gradient-to-r from-[#9DB8A0] to-[#7A9380] rounded-2xl p-8 text-white overflow-hidden relative"
+            onClick={handleBannerClick}
+          >
+            <button
+              onClick={(e) => { e.stopPropagation(); prevBanner() }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/20 hover:bg-white/30 rounded-full w-10 h-10 flex items-center justify-center transition"
+            >
+              ←
+            </button>
             <div className="flex-1 mx-16 text-center">
               <div className="text-5xl mb-3">{banners[currentBanner].icon}</div>
               <h3 className="text-2xl font-bold mb-2">{banners[currentBanner].title}</h3>
               <p className="text-white/90">{banners[currentBanner].description}</p>
             </div>
-
             <button
-              onClick={nextBanner}
-              className="absolute right-4 z-10 bg-white/20 hover:bg-white/30 rounded-full w-10 h-10 flex items-center justify-center transition"
+              onClick={(e) => { e.stopPropagation(); nextBanner() }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/20 hover:bg-white/30 rounded-full w-10 h-10 flex items-center justify-center transition"
             >
               →
             </button>
           </div>
-        </div>
+        )}
 
         {/* Indicators */}
         <div className="flex justify-center gap-2 mt-4">
@@ -252,6 +323,43 @@ export default function HomePage() {
           </div>
         )}
       </section>
+
+      {/* Guide 언어 선택 모달 */}
+      {isGuideLangModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center"
+          onClick={() => setIsGuideLangModalOpen(false)}
+        >
+          <div
+            className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base font-bold text-gray-900">{t('guide.langModal.title')}</h3>
+              <button
+                onClick={() => setIsGuideLangModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 transition text-xl leading-none"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mb-4">{t('home.banners.services.langHint')}</p>
+            <div className="grid grid-cols-2 gap-3">
+              {GUIDE_LANGS.map(({ code, flag, label }) => (
+                <button
+                  key={code}
+                  onClick={() => handleGuideLangSelect(code)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:border-[#9DB8A0] hover:bg-[#EEF4EF] transition"
+                >
+                  <span className="text-xl">{flag}</span>
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -122,7 +122,7 @@ export default function FriendsPage() {
         if ((err as any)?.name === 'AbortError') return;
         console.error('[Friends] fetchData exception:', err);
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        setLoading(false);
       }
     };
     fetchData();

@@ -118,7 +118,9 @@
       },
       "services": {
         "title": "Servicios para extranjeros",
-        "desc": "Descubre todos los servicios de ANNYEONG"
+        "desc": "Descubre todos los servicios de ANNYEONG",
+        "tapHint": "Toca para empezar",
+        "langHint": "Selecciona tu idioma para ver la guía"
       },
       "announcements": {
         "title": "Anuncios de ANNYEONG",
@@ -445,6 +447,44 @@
     "job": {
       "title": "Oportunidades de Empleo",
       "desc": "Explora ofertas de trabajo a tiempo parcial y completo"
+    }
+  },
+  "guide": {
+    "hero": {
+      "title": "Vivir en Corea sin ANNYEONG es imposible",
+      "subtitle": "Así como el agua y el aire son esenciales, ANNYEONG no es opcional — es imprescindible para vivir en Corea."
+    },
+    "why": {
+      "title": "Por qué ANNYEONG es esencial para vivir en Corea",
+      "item1": "Respuestas reales de personas reales, no de IA",
+      "item2": "Información en tiempo real, no desactualizada como en redes sociales",
+      "item3": "Un servicio creado específicamente para extranjeros en Corea",
+      "item4": "Traducción en tiempo real + comunidad — 100% gratis",
+      "item5": "Sin respuesta en 10 min (9am–6pm) tras publicar = recompensa"
+    },
+    "language": {
+      "title": "Idioma y Traducción",
+      "item1": "Tras registrarte, todos los posts y comentarios se traducen en tiempo real",
+      "item2": "Recibe notificaciones push para estar al tanto más rápido",
+      "item3": "Empieza una mejor vida en Corea en solo 30 segundos"
+    },
+    "app": {
+      "title": "Úsalo como una app",
+      "item1": "Agrégalo a tu pantalla de inicio y úsalo como una app nativa",
+      "item2": "Acceso más rápido y conveniente",
+      "installBtn": "Cómo instalar"
+    },
+    "langModal": {
+      "title": "Elige tu idioma"
+    },
+    "deviceModal": {
+      "title": "Selecciona tu dispositivo",
+      "iosDesc": "Añadir a pantalla de inicio desde Safari",
+      "androidDesc": "Añadir a pantalla de inicio desde Chrome"
+    },
+    "cta": {
+      "home": "Ir al Inicio",
+      "signUp": "Registrarse"
     }
   }
 }

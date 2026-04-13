@@ -9,6 +9,7 @@ import UserProfileModal from "@/components/common/UserProfileModal";
 import ReportModal from "@/components/common/ReportModal";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
+import { getClientTranslation, setClientTranslation } from "@/lib/utils/clientTranslateCache";
 
 // ── 클라이언트 측 언어 정규화 (서버 LANG_MAP 과 동일) ──────────────
 const LANG_MAP: Record<string, string> = {
@@ -22,7 +23,7 @@ function normalizeLang(v?: string | null): string {
   return LANG_MAP[v.toLowerCase().trim()] ?? 'en';
 }
 
-// ── /api/translate 호출 헬퍼 (모듈 레벨) ─────────────────────────
+// ── /api/translate 호출 헬퍼 (모듈 레벨, 클라이언트 캐시 적용) ─────────────────────────
 async function callTranslate(
   contentType: 'post' | 'comment',
   contentId: string,
@@ -32,6 +33,8 @@ async function callTranslate(
   accessToken: string,
   signal: AbortSignal,
 ): Promise<{ text: string; isTranslated: boolean }> {
+  const cached = getClientTranslation(contentId, fieldName)
+  if (cached) return cached
   try {
     const res = await fetch('/api/translate', {
       method: 'POST',
@@ -43,7 +46,9 @@ async function callTranslate(
       signal,
     });
     if (!res.ok) return { text: sourceText, isTranslated: false };
-    return await res.json();
+    const result = await res.json()
+    setClientTranslation(contentId, fieldName, result)
+    return result
   } catch {
     return { text: sourceText, isTranslated: false };
   }
@@ -145,6 +150,14 @@ export default function PostDetailPage() {
   const [showOriginalPost, setShowOriginalPost] = useState(false);
   const [showOriginalComments, setShowOriginalComments] = useState<Record<string, boolean>>({});
 
+  // ── 로그인 모달 닫힌 시에만 auth 상태 업데이트 (풀 리패치 없이) ─────────────────
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsLoggedIn(!!session)
+      setCurrentUserId(session?.user.id ?? null)
+    })
+  }, [isLoginOpen])
+
   // fetch post, author, comments, likes
   useEffect(() => {
     const controller = new AbortController();
@@ -154,9 +167,8 @@ export default function PostDetailPage() {
       try {
         const { data: sessionData } = await supabase.auth.getSession();
         if (controller.signal.aborted) return;
-        setIsLoggedIn(!!sessionData.session);
-        setCurrentUserId(sessionData.session?.user.id ?? null);
-        // post fetch
+
+        // ✅ post fetch
         const { data: postData, error: postError } = await supabase
           .from("post")
           .select("*")
@@ -169,55 +181,39 @@ export default function PostDetailPage() {
           return;
         }
         setPost(postData);
-        // post_like 여부
-        if (sessionData.session) {
-          const { data: likeRow } = await supabase
-            .from("post_like")
-            .select("id")
-            .eq("user_id", sessionData.session.user.id)
-            .eq("post_id", postId)
-            .maybeSingle();
-          if (!controller.signal.aborted) setPostLiked(!!likeRow);
-        }
-        // author fetch
-        const { data: authorProfile } = await supabase
-          .from("profile")
-          .select("nickname, flag, image_url")
-          .eq("id", postData.author_id)
-          .maybeSingle();
+
+        // ✅ like + author + comments + comment_likes 병렬 fetch
+        const [likeResult, authorResult, commentResult, commentLikeResult] = await Promise.all([
+          sessionData.session
+            ? supabase.from("post_like").select("id").eq("user_id", sessionData.session.user.id).eq("post_id", postId).maybeSingle()
+            : Promise.resolve({ data: null }),
+          supabase.from("profile").select("nickname, flag, image_url").eq("id", postData.author_id).maybeSingle(),
+          supabase.from("comment").select("*, profile(nickname, flag, image_url)").eq("post_id", postId).order("created_at", { ascending: true }),
+          sessionData.session
+            ? supabase.from("comment_like").select("comment_id").eq("user_id", sessionData.session.user.id)
+            : Promise.resolve({ data: null }),
+        ]);
         if (controller.signal.aborted) return;
-        setAuthor(authorProfile);
-        // comments fetch
-        const { data: commentData } = await supabase
-          .from("comment")
-          .select("*, profile(nickname, flag, image_url)")
-          .eq("post_id", postId)
-          .order("created_at", { ascending: true });
-        if (controller.signal.aborted) return;
-        // flatten profile join
-        const commentsWithProfile = (commentData || []).map((c: any) => ({
+
+        if (likeResult.data) setPostLiked(true);
+        setAuthor((authorResult as any).data ?? null);
+
+        const commentsWithProfile = (((commentResult as any).data as any[]) || []).map((c: any) => ({
           ...c,
           nickname: c.profile?.nickname,
           flag: c.profile?.flag,
           profile_image_url: c.profile?.image_url,
         }));
         setComments(commentsWithProfile);
-        // comment likes fetch
-        if (sessionData.session) {
-          const userId = sessionData.session.user.id;
-          const { data: likeRows } = await supabase
-            .from("comment_like")
-            .select("comment_id")
-            .eq("user_id", userId);
-          if (!controller.signal.aborted) {
-            const likeMap: { [commentId: string]: boolean } = {};
-            (likeRows || []).forEach((row: any) => { likeMap[row.comment_id] = true; });
-            setCommentLikes(likeMap);
-          }
-        }
 
-        // ── 번역 처리 ────────────────────────────────────────────────
-        // 로그인 사용자의 언어가 게시글 원문 언어와 다를 때만 호출
+        const likeMap: { [commentId: string]: boolean } = {};
+        (((commentLikeResult as any).data as any[]) || []).forEach((row: any) => { likeMap[row.comment_id] = true; });
+        setCommentLikes(likeMap);
+
+        // ✅ 코어 데이터 로딩 완료 → 즉시 해제 (번역은 백그라운드)
+        if (!controller.signal.aborted) setLoading(false);
+
+        // ── 번역 처리 (로딩 해제 후 백그라운드) ──────────────────────────────
         if (sessionData.session) {
           const { data: userProfile } = await supabase
             .from('profile')
@@ -228,7 +224,6 @@ export default function PostDetailPage() {
           if (!controller.signal.aborted) {
             const userLangCode = normalizeLang(userProfile?.uselanguage);
             const postLangCode = normalizeLang(postData.language);
-
             const accessToken = sessionData.session.access_token;
 
             if (userLangCode !== postLangCode) {
@@ -247,16 +242,10 @@ export default function PostDetailPage() {
               }
 
               // 댓글 병렬 번역
-              // sourceLanguage: 댓글 자체의 language 컬럼을 우선 사용, 없으면 post.language 로 fallback
-              if (commentsWithProfile.length > 0) {
+              if (commentsWithProfile.length > 0 && !controller.signal.aborted) {
                 const commentResults = await Promise.all(
                   commentsWithProfile.map((c) =>
-                    callTranslate(
-                      'comment', c.id, 'content', c.content,
-                      c.language ?? postData.language,   // comment.language 우선
-                      accessToken,
-                      controller.signal,
-                    )
+                    callTranslate('comment', c.id, 'content', c.content, c.language ?? postData.language, accessToken, controller.signal)
                   )
                 );
                 if (!controller.signal.aborted) {
@@ -278,12 +267,13 @@ export default function PostDetailPage() {
         console.error("[PostDetail] fetchData exception:", err);
         setError("Failed to load post");
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        // 에러 경로에서 loading이 아직 true이면 해제 (React 18은 unmounted setState 무시)
+        setLoading(false);
       }
     };
     fetchData();
     return () => controller.abort();
-  }, [postId, isLoginOpen, commentVersion]);
+  }, [postId, commentVersion]);
 
   // 댓글 작성
   const handleCommentSubmit = async (e: React.FormEvent) => {

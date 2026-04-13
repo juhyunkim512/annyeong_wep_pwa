@@ -118,7 +118,9 @@
       },
       "services": {
         "title": "Services for Internationals",
-        "desc": "Discover All ANNYEONG Services"
+        "desc": "Discover All ANNYEONG Services",
+        "tapHint": "Tap to get started",
+        "langHint": "Select your language to view the guide"
       },
       "announcements": {
         "title": "ANNYEONG Announcements",
@@ -445,6 +447,44 @@
     "job": {
       "title": "Job Opportunities",
       "desc": "Browse part-time and full-time job listings"
+    }
+  },
+  "guide": {
+    "hero": {
+      "title": "Living in Korea? ANNYEONG is essential.",
+      "subtitle": "Just as people need water and air, ANNYEONG is not optional — it's a must for life in Korea."
+    },
+    "why": {
+      "title": "Why ANNYEONG is essential for life in Korea",
+      "item1": "Real answers from real people, not AI",
+      "item2": "Real-time info — not outdated posts from old SNS",
+      "item3": "A service built specifically for foreigners in Korea",
+      "item4": "Real-time translation + community — 100% free",
+      "item5": "No reply within 10 min (9am–6pm)? You get rewarded"
+    },
+    "language": {
+      "title": "Language & Translation",
+      "item1": "All posts and comments are translated in real-time after sign-up",
+      "item2": "Get push notifications and stay updated faster",
+      "item3": "Start a better life in Korea in just 30 seconds"
+    },
+    "app": {
+      "title": "Use it like an app",
+      "item1": "Add to your home screen and use it like a native app",
+      "item2": "Faster and more convenient access",
+      "installBtn": "How to install"
+    },
+    "langModal": {
+      "title": "Choose your language"
+    },
+    "deviceModal": {
+      "title": "Select your device",
+      "iosDesc": "Add to home screen via Safari",
+      "androidDesc": "Add to home screen via Chrome"
+    },
+    "cta": {
+      "home": "Go to Home",
+      "signUp": "Sign Up"
     }
   }
 }
