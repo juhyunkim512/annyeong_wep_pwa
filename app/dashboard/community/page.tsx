@@ -127,13 +127,14 @@ export default function CommunityPage() {
             nickname: Array.isArray(p.public_profile) ? p.public_profile[0]?.nickname : p.public_profile?.nickname ?? null,
           }));
           setPosts(normalized);
-          // ✅ 포스트 로딩 즉시 해제 — 번역은 백그라운드에서 진행
           setLoading(false);
 
-          // ── 제목 번역 (백그라운드, 로딩 이미 해제 후) ───────────────────
-          if (!controller.signal.aborted) {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
+          // ── 번역: 완전히 분리된 비동기 컨텍스트 (I18nProvider auth 충돌 방지) ──
+          void (async () => {
+            try {
+              if (controller.signal.aborted) return;
+              const { data: { session } } = await supabase.auth.getSession();
+              if (!session || controller.signal.aborted) return;
               const { data: userProfile } = await supabase
                 .from('profile')
                 .select('uselanguage')
@@ -154,8 +155,8 @@ export default function CommunityPage() {
                   setTranslatedTitles(map);
                 }
               }
-            }
-          }
+            } catch { /* 번역 실패는 무시 */ }
+          })()
         }
       } catch (err) {
         if ((err as any)?.name === 'AbortError') return;

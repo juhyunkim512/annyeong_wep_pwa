@@ -3,9 +3,11 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import '@/lib/i18n'
+
+const PULL_THRESHOLD = 72 // px
 
 export default function DashboardLayout({
   children,
@@ -15,6 +17,41 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { t } = useTranslation('common')
+
+  // ── Pull-to-refresh ──────────────────────────────────────
+  const [pullY, setPullY] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+  const touchStartY = useRef(0)
+  const isPulling = useRef(false)
+
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    const main = e.currentTarget as HTMLElement
+    if (main.scrollTop === 0) {
+      touchStartY.current = e.touches[0].clientY
+      isPulling.current = true
+    }
+  }, [])
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isPulling.current) return
+    const delta = e.touches[0].clientY - touchStartY.current
+    if (delta > 0) {
+      // rubber-band: 저항감
+      setPullY(Math.min(delta * 0.45, PULL_THRESHOLD + 20))
+    }
+  }, [])
+
+  const onTouchEnd = useCallback(() => {
+    if (!isPulling.current) return
+    isPulling.current = false
+    if (pullY >= PULL_THRESHOLD) {
+      setRefreshing(true)
+      setPullY(0)
+      window.location.reload()
+    } else {
+      setPullY(0)
+    }
+  }, [pullY])
 
   const menuItems = [
     { icon: '🏠', label: t('nav.main'), href: '/dashboard/home' },
@@ -119,7 +156,25 @@ export default function DashboardLayout({
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 md:mt-0 mt-24 overflow-auto">
+      <main
+        className="flex-1 md:mt-0 mt-24 overflow-auto"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        {/* Pull-to-refresh 인디케이터 (모바일 전용) */}
+        <div
+          className="md:hidden flex items-center justify-center overflow-hidden transition-all duration-200"
+          style={{ height: refreshing ? 48 : pullY > 0 ? pullY : 0 }}
+        >
+          <div
+            className={`w-7 h-7 rounded-full border-2 border-[#9DB8A0] border-t-transparent ${refreshing ? 'animate-spin' : ''}`}
+            style={{
+              opacity: Math.min(pullY / PULL_THRESHOLD, 1),
+              transform: `rotate(${pullY * 3}deg)`,
+            }}
+          />
+        </div>
         <div className="px-6 pt-0 pb-6 md:px-8 md:pt-2 md:pb-8">{children}</div>
       </main>
     </div>

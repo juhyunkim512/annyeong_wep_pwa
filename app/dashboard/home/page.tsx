@@ -128,40 +128,39 @@ export default function HomePage() {
         const normalizedTrending = normalize(trending ?? [])
         setRecentPosts(normalizedRecent)
         setTrendingPosts(normalizedTrending)
-        // ✅ 포스트 로딩 즉시 해제 — 번역은 백그라운드에서 진행
-        if (reqRef.current === reqId) setPostsLoading(false)
+        setPostsLoading(false)
 
-        // ── 제목 번역 (로딩 해제 후 백그라운드) ──────────
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session && reqRef.current === reqId) {
-          const { data: userProfile } = await supabase
-            .from('profile')
-            .select('uselanguage')
-            .eq('id', session.user.id)
-            .maybeSingle()
-          const userLang = normalizeLang(userProfile?.uselanguage)
-          const accessToken = session.access_token
-
-          const allPosts = [...normalizedRecent, ...normalizedTrending]
-          const unique = allPosts.filter((p, i) => allPosts.findIndex((q) => q.id === p.id) === i)
-          const toTranslate = unique.filter((p) => normalizeLang(p.language) !== userLang)
-
-          if (toTranslate.length > 0) {
-            const results = await Promise.all(
-              toTranslate.map((p) => callTranslate(p.id, p.title, p.language, accessToken, controller.signal))
-            )
-            if (reqRef.current === reqId && !controller.signal.aborted) {
-              const map: Record<string, string> = {}
-              toTranslate.forEach((p, i) => { if (results[i].isTranslated) map[p.id] = results[i].text })
-              setTranslatedTitles(map)
+        // ── 번역: 완전히 분리된 비동기 컨텍스트 (I18nProvider auth 충돌 방지) ──
+        void (async () => {
+          try {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session || reqRef.current !== reqId) return
+            const { data: userProfile } = await supabase
+              .from('profile')
+              .select('uselanguage')
+              .eq('id', session.user.id)
+              .maybeSingle()
+            const userLang = normalizeLang(userProfile?.uselanguage)
+            const accessToken = session.access_token
+            const allPosts = [...normalizedRecent, ...normalizedTrending]
+            const unique = allPosts.filter((p, i) => allPosts.findIndex((q) => q.id === p.id) === i)
+            const toTranslate = unique.filter((p) => normalizeLang(p.language) !== userLang)
+            if (toTranslate.length > 0) {
+              const results = await Promise.all(
+                toTranslate.map((p) => callTranslate(p.id, p.title, p.language, accessToken, controller.signal))
+              )
+              if (reqRef.current === reqId) {
+                const map: Record<string, string> = {}
+                toTranslate.forEach((p, i) => { if (results[i].isTranslated) map[p.id] = results[i].text })
+                setTranslatedTitles(map)
+              }
             }
-          }
-        }
+          } catch { /* 번역 실패는 무시 */ }
+        })()
       } catch (err) {
-        if (reqRef.current !== reqId) return
         console.error('[Home] fetchPosts error:', err)
       } finally {
-        if (reqRef.current === reqId) setPostsLoading(false)
+        setPostsLoading(false)
       }
     }
     fetchPosts()
@@ -169,14 +168,17 @@ export default function HomePage() {
   }, [])
 
   const banners = [
-    { title: t('home.banners.services.title'), description: t('home.banners.services.desc'), icon: '✨', isGuide: true },
-    { title: t('home.banners.policy.title'), description: t('home.banners.policy.desc'), icon: '🏙️', isGuide: false },
-    { title: t('home.banners.announcements.title'), description: t('home.banners.announcements.desc'), icon: '📢', isGuide: false },
+    { title: t('home.banners.services.title'), description: t('home.banners.services.desc'), icon: '✨', isGuide: true, href: null, image: '/banner1.png' },
+    { title: t('home.banners.policy.title'), description: t('home.banners.policy.desc'), icon: '🏙️', isGuide: false, href: 'https://gauge-rope-63895960.figma.site', image: '/banner2.png' },
+    { title: t('home.banners.announcements.title'), description: t('home.banners.announcements.desc'), icon: '📢', isGuide: false, href: null, image: null },
   ]
 
   const handleBannerClick = () => {
-    if (banners[currentBanner].isGuide) {
+    const banner = banners[currentBanner]
+    if (banner.isGuide) {
       setIsGuideLangModalOpen(true)
+    } else if (banner.href) {
+      window.open(banner.href, '_blank', 'noopener,noreferrer')
     }
   }
 
@@ -205,26 +207,20 @@ export default function HomePage() {
     <div className="max-w-6xl space-y-8">
       {/* Banner Carousel */}
       <section className="relative">
-        {banners[currentBanner].isGuide ? (
-          /* Guide 배너 — 이미지 */
+        {banners[currentBanner].image ? (
+          /* 이미지 배너 */
           <div
             className="relative rounded-2xl overflow-hidden cursor-pointer active:opacity-90"
             onClick={handleBannerClick}
           >
             <Image
-              src="/banner1.png"
+              src={banners[currentBanner].image!}
               alt={banners[currentBanner].title}
               width={1200}
               height={400}
               className="w-full object-cover"
               priority
             />
-            {/* 중앙 하단 텍스트 */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 text-center pointer-events-none">
-              <span className="bg-black/30 backdrop-blur-sm text-white text-xl font-semibold px-6 py-2 rounded-full whitespace-nowrap">
-                How to use ANNYEONG
-              </span>
-            </div>
             <button
               onClick={(e) => { e.stopPropagation(); prevBanner() }}
               className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-black/20 hover:bg-black/30 rounded-full w-10 h-10 flex items-center justify-center transition text-white"

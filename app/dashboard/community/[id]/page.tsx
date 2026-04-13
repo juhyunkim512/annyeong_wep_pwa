@@ -210,57 +210,58 @@ export default function PostDetailPage() {
         (((commentLikeResult as any).data as any[]) || []).forEach((row: any) => { likeMap[row.comment_id] = true; });
         setCommentLikes(likeMap);
 
-        // ✅ 코어 데이터 로딩 완료 → 즉시 해제 (번역은 백그라운드)
-        if (!controller.signal.aborted) setLoading(false);
+        setLoading(false);
 
-        // ── 번역 처리 (로딩 해제 후 백그라운드) ──────────────────────────────
+        // ── 번역: 완전히 분리된 비동기 컨텍스트 (I18nProvider auth 충돌 방지) ──
         if (sessionData.session) {
-          const { data: userProfile } = await supabase
-            .from('profile')
-            .select('uselanguage')
-            .eq('id', sessionData.session.user.id)
-            .maybeSingle();
-
-          if (!controller.signal.aborted) {
-            const userLangCode = normalizeLang(userProfile?.uselanguage);
-            const postLangCode = normalizeLang(postData.language);
-            const accessToken = sessionData.session.access_token;
-
-            if (userLangCode !== postLangCode) {
-              // post title + content 병렬 번역
-              const [titleRes, contentRes] = await Promise.all([
-                callTranslate('post', postData.id, 'title', postData.title, postData.language, accessToken, controller.signal),
-                callTranslate('post', postData.id, 'content', postData.content, postData.language, accessToken, controller.signal),
-              ]);
-              if (!controller.signal.aborted) {
-                setTranslatedPost({
-                  title: titleRes.isTranslated ? titleRes.text : postData.title,
-                  titleIsTranslated: titleRes.isTranslated,
-                  content: contentRes.isTranslated ? contentRes.text : postData.content,
-                  contentIsTranslated: contentRes.isTranslated,
-                });
-              }
-
-              // 댓글 병렬 번역
-              if (commentsWithProfile.length > 0 && !controller.signal.aborted) {
-                const commentResults = await Promise.all(
-                  commentsWithProfile.map((c) =>
-                    callTranslate('comment', c.id, 'content', c.content, c.language ?? postData.language, accessToken, controller.signal)
-                  )
-                );
+          const _session = sessionData.session;
+          const _post = postData;
+          const _comments = commentsWithProfile;
+          void (async () => {
+            try {
+              if (controller.signal.aborted) return;
+              const { data: userProfile } = await supabase
+                .from('profile')
+                .select('uselanguage')
+                .eq('id', _session.user.id)
+                .maybeSingle();
+              if (controller.signal.aborted) return;
+              const userLangCode = normalizeLang(userProfile?.uselanguage);
+              const postLangCode = normalizeLang(_post.language);
+              const accessToken = _session.access_token;
+              if (userLangCode !== postLangCode) {
+                const [titleRes, contentRes] = await Promise.all([
+                  callTranslate('post', _post.id, 'title', _post.title, _post.language, accessToken, controller.signal),
+                  callTranslate('post', _post.id, 'content', _post.content, _post.language, accessToken, controller.signal),
+                ]);
                 if (!controller.signal.aborted) {
-                  const cMap: Record<string, { text: string; isTranslated: boolean }> = {};
-                  commentsWithProfile.forEach((c, i) => {
-                    cMap[c.id] = {
-                      text: commentResults[i].isTranslated ? commentResults[i].text : c.content,
-                      isTranslated: commentResults[i].isTranslated,
-                    };
+                  setTranslatedPost({
+                    title: titleRes.isTranslated ? titleRes.text : _post.title,
+                    titleIsTranslated: titleRes.isTranslated,
+                    content: contentRes.isTranslated ? contentRes.text : _post.content,
+                    contentIsTranslated: contentRes.isTranslated,
                   });
-                  setTranslatedComments(cMap);
+                }
+                if (_comments.length > 0 && !controller.signal.aborted) {
+                  const commentResults = await Promise.all(
+                    _comments.map((c) =>
+                      callTranslate('comment', c.id, 'content', c.content, c.language ?? _post.language, accessToken, controller.signal)
+                    )
+                  );
+                  if (!controller.signal.aborted) {
+                    const cMap: Record<string, { text: string; isTranslated: boolean }> = {};
+                    _comments.forEach((c, i) => {
+                      cMap[c.id] = {
+                        text: commentResults[i].isTranslated ? commentResults[i].text : c.content,
+                        isTranslated: commentResults[i].isTranslated,
+                      };
+                    });
+                    setTranslatedComments(cMap);
+                  }
                 }
               }
-            }
-          }
+            } catch { /* 번역 실패는 무시 */ }
+          })()
         }
       } catch (err) {
         if ((err as any)?.name === 'AbortError') return;
