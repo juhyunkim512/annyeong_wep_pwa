@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import AvatarImage from './AvatarImage';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 
 const FLAG_EMOJI_MAP: { [key: string]: string } = {
@@ -59,7 +60,9 @@ export default function UserProfileModal({
   const [blockSuccess, setBlockSuccess] = useState('');
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
   const { t } = useTranslation('common');
+  const router = useRouter();
 
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -226,6 +229,28 @@ export default function UserProfileModal({
     setFollowLoading(false);
   };
 
+  const handleChat = async () => {
+    if (!currentUserId) { onLoginRequired(); return; }
+    setChatLoading(true);
+    // user_a < user_b 보장 (중복 방지)
+    const userA = currentUserId < userId ? currentUserId : userId;
+    const userB = currentUserId < userId ? userId : currentUserId;
+    // upsert: 이미 있으면 그 방으로, 없으면 생성
+    const { data, error } = await supabase
+      .from('chat_room')
+      .upsert({ user_a: userA, user_b: userB }, { onConflict: 'user_a,user_b', ignoreDuplicates: false })
+      .select('id')
+      .maybeSingle();
+    if (!error && data?.id) {
+      // 내 hidden 플래그 해제 (나갔다가 다시 들어오는 경우)
+      const field = currentUserId < userId ? 'user_a_hidden' : 'user_b_hidden';
+      await supabase.from('chat_room').update({ [field]: false }).eq('id', data.id);
+      onClose();
+      router.push(`/dashboard/chat/${data.id}`);
+    }
+    setChatLoading(false);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -304,17 +329,26 @@ export default function UserProfileModal({
                     </span>
                   )}
                   {currentUserId && currentUserId !== userId && (
-                    <button
-                      onClick={handleFollow}
-                      disabled={followLoading}
-                      className={`mt-2 px-3 py-1 rounded-full text-xs font-medium transition border ${
-                        isFollowing
-                          ? 'bg-white text-[#9DB8A0] border-[#9DB8A0] hover:bg-red-50 hover:text-red-500 hover:border-red-400'
-                          : 'bg-[#9DB8A0] text-white border-[#9DB8A0] hover:opacity-90'
-                      } disabled:opacity-60`}
-                    >
-                      {followLoading ? '...' : isFollowing ? t('common.following') : t('common.follow')}
-                    </button>
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        onClick={handleFollow}
+                        disabled={followLoading}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition border ${
+                          isFollowing
+                            ? 'bg-white text-[#9DB8A0] border-[#9DB8A0] hover:bg-red-50 hover:text-red-500 hover:border-red-400'
+                            : 'bg-[#9DB8A0] text-white border-[#9DB8A0] hover:opacity-90'
+                        } disabled:opacity-60`}
+                      >
+                        {followLoading ? '...' : isFollowing ? t('common.following') : t('common.follow')}
+                      </button>
+                      <button
+                        onClick={handleChat}
+                        disabled={chatLoading}
+                        className="px-3 py-1 rounded-full text-xs font-medium border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-60 transition"
+                      >
+                        {chatLoading ? '...' : t('chat.button')}
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

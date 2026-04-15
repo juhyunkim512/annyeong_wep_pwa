@@ -1,4 +1,22 @@
 {
+  "chat": {
+    "title": "Trò chuyện",
+    "button": "Nhắn tin",
+    "empty": "Chưa có cuộc trò chuyện",
+    "emptyDesc": "Theo dõi nhau để bắt đầu trò chuyện",
+    "mutualFollowRequired": "Cần theo dõi nhau để gửi tin nhắn.",
+    "followButton": "Theo dõi",
+    "inputPlaceholder": "Nhập tin nhắn...",
+    "menuBlock": "Chặn",
+    "menuReport": "Báo cáo",
+    "menuLeave": "Rời khỏi chat",
+    "leaveConfirm": "Rời khỏi cuộc trò chuyện này?",
+    "blockConfirm": "Chặn người dùng này? Mối quan hệ theo dõi sẽ bị xóa.",
+    "blocked": "Bạn đã chặn người dùng này.",
+    "noMessages": "Chưa có tin nhắn. Hãy chào nhau nào!",
+    "sendFailed": "Gửi tin nhắn thất bại.",
+    "you": "Bạn"
+  },
   "nav": {
     "main": "Trang chính",
     "community": "Cộng đồng",

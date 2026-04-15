@@ -50,26 +50,18 @@ const LANG_NAME: Record<string, string> = {
  * @param targetLang  번역 대상 언어 short code (e.g. 'en', 'ja')
  * @returns           번역된 텍스트, 실패 시 null
  */
-export async function llmTranslate(
-  text: string,
-  sourceLang: string,
-  targetLang: string,
-): Promise<string | null> {
+async function callOpenAI(text: string, sourceLang: string, targetLang: string): Promise<string | null> {
   const sourceLabel = LANG_NAME[sourceLang] ?? sourceLang;
   const targetLabel = LANG_NAME[targetLang] ?? targetLang;
-
-  const apiKey = process.env.OPENAI_API_KEY;
-
-  try {
-    const client = getOpenAIClient();
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      temperature: 0.1,
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'system',
-          content: `You are a translator for a community app used by foreigners living in Korea.
+  const client = getOpenAIClient();
+  const response = await client.chat.completions.create({
+    model: 'gpt-4.1-mini',
+    temperature: 0.1,
+    max_tokens: 1024,
+    messages: [
+      {
+        role: 'system',
+        content: `You are a translator for a community app used by foreigners living in Korea.
 
 Rules:
 - Translate from ${sourceLabel} to ${targetLabel}.
@@ -81,27 +73,53 @@ Rules:
 - If the source is grammatically incorrect or slangy, infer the most likely intended meaning.
 - Preserve laughter expressions (haha, lol, ㅋㅋ) in a natural target-language equivalent.
 - Return ONLY the translated text. No explanations, no quotes, no extra formatting.`,
-        },
-        {
-          role: 'user',
-          content: text,
-        },
-      ],
-    });
+      },
+      {
+        role: 'user',
+        content: text,
+      },
+    ],
+  });
+  return response.choices[0]?.message?.content?.trim() ?? null;
+}
 
-    const result = response.choices[0]?.message?.content?.trim();
-    if (!result) {
-      console.warn('[llmTranslate] empty result from OpenAI');
+export async function llmTranslate(
+  text: string,
+  sourceLang: string,
+  targetLang: string,
+): Promise<string | null> {
+  const MAX_RETRIES = 3;
+  let delay = 1000; // 1s → 2s → 4s
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const result = await callOpenAI(text, sourceLang, targetLang);
+      if (!result) {
+        console.warn('[llmTranslate] empty result from OpenAI');
+        return null;
+      }
+      return result;
+    } catch (err: unknown) {
+      const status = (err && typeof err === 'object' && 'status' in err) ? (err as { status: number }).status : null;
+      const errMsg = err instanceof Error ? err.message : String(err);
+
+      if (status === 429) {
+        if (attempt < MAX_RETRIES) {
+          console.warn(`[llmTranslate] RATE LIMIT (429) — retrying in ${delay}ms (attempt ${attempt}/${MAX_RETRIES})`);
+          await new Promise((r) => setTimeout(r, delay));
+          delay *= 2;
+          continue;
+        }
+        console.error('[llmTranslate] RATE LIMIT (429) — all retries exhausted. Falling back to Google.');
+      } else if (status === 401) {
+        console.error('[llmTranslate] UNAUTHORIZED (401) — API key invalid or expired.');
+      } else if (status === 402 || errMsg.includes('quota') || errMsg.includes('billing')) {
+        console.error('[llmTranslate] QUOTA/BILLING error — OpenAI credits may be exhausted.');
+      } else {
+        console.error(`[llmTranslate] OpenAI error (status=${status}):`, errMsg);
+      }
       return null;
     }
-
-    return result;
-  } catch (err: unknown) {
-    const errMsg = err instanceof Error ? err.message : String(err);
-    console.error('[llmTranslate] OpenAI error:', errMsg);
-    if (err && typeof err === 'object' && 'status' in err) {
-      console.error('[llmTranslate] HTTP status:', (err as { status: number }).status);
-    }
-    return null;
   }
+  return null;
 }

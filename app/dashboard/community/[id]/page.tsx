@@ -215,22 +215,31 @@ export default function PostDetailPage() {
 
         // ── 번역: 완전히 분리된 비동기 컨텍스트 (I18nProvider auth 충돌 방지) ──
         if (sessionData.session) {
-          const _session = sessionData.session;
           const _post = postData;
           const _comments = commentsWithProfile;
           void (async () => {
             try {
               if (controller.signal.aborted) return;
+
+              // 세션 리프레시 → 항상 유효한 access_token 확보
+              const { data: { session: freshSession } } = await supabase.auth.refreshSession();
+              if (!freshSession || controller.signal.aborted) return;
+
               const { data: userProfile } = await supabase
                 .from('profile')
                 .select('uselanguage')
-                .eq('id', _session.user.id)
+                .eq('id', freshSession.user.id)
                 .maybeSingle();
               if (controller.signal.aborted) return;
               const userLangCode = normalizeLang(userProfile?.uselanguage);
               const postLangCode = normalizeLang(_post.language);
-              const accessToken = _session.access_token;
+              const accessToken = freshSession.access_token;
+
+              console.log('[번역] userLang:', userLangCode, 'postLang:', postLangCode);
+
+              // ── 게시글 번역 (게시글 언어 ≠ 유저 언어일 때만) ──
               if (userLangCode !== postLangCode) {
+                console.log('[번역] 게시글 번역 실행');
                 const [titleRes, contentRes] = await Promise.all([
                   callTranslate('post', _post.id, 'title', _post.title, _post.language, userLangCode, accessToken, controller.signal),
                   callTranslate('post', _post.id, 'content', _post.content, _post.language, userLangCode, accessToken, controller.signal),
@@ -243,25 +252,35 @@ export default function PostDetailPage() {
                     contentIsTranslated: contentRes.isTranslated,
                   });
                 }
-                if (_comments.length > 0 && !controller.signal.aborted) {
-                  const commentResults = await Promise.all(
-                    _comments.map((c) =>
-                      callTranslate('comment', c.id, 'content', c.content, c.language ?? _post.language, userLangCode, accessToken, controller.signal)
-                    )
-                  );
-                  if (!controller.signal.aborted) {
-                    const cMap: Record<string, { text: string; isTranslated: boolean }> = {};
-                    _comments.forEach((c, i) => {
-                      cMap[c.id] = {
-                        text: commentResults[i].isTranslated ? commentResults[i].text : c.content,
-                        isTranslated: commentResults[i].isTranslated,
-                      };
-                    });
-                    setTranslatedComments(cMap);
-                  }
+              }
+
+              // ── 댓글 번역 (각 댓글의 언어를 개별 비교) ──
+              if (_comments.length > 0 && !controller.signal.aborted) {
+                const commentResults = await Promise.all(
+                  _comments.map((c) => {
+                    const commentLangCode = normalizeLang(c.language ?? _post.language);
+                    console.log('[번역] comment', c.id, 'lang:', commentLangCode, 'vs user:', userLangCode);
+                    if (commentLangCode === userLangCode) {
+                      // 동일 언어 → 번역 불필요, 원문 반환
+                      return Promise.resolve({ text: c.content, isTranslated: false });
+                    }
+                    return callTranslate('comment', c.id, 'content', c.content, c.language ?? _post.language, userLangCode, accessToken, controller.signal);
+                  })
+                );
+                if (!controller.signal.aborted) {
+                  const cMap: Record<string, { text: string; isTranslated: boolean }> = {};
+                  _comments.forEach((c, i) => {
+                    cMap[c.id] = {
+                      text: commentResults[i].isTranslated ? commentResults[i].text : c.content,
+                      isTranslated: commentResults[i].isTranslated,
+                    };
+                  });
+                  setTranslatedComments(cMap);
                 }
               }
-            } catch { /* 번역 실패는 무시 */ }
+            } catch (err) {
+              console.error('[번역] 실패:', err);
+            }
           })()
         }
       } catch (err) {

@@ -38,13 +38,14 @@ import {
 // Allowed value sets
 // ─────────────────────────────────────────────
 
-const ALLOWED_CONTENT_TYPES: ContentType[] = ['post', 'comment'];
+const ALLOWED_CONTENT_TYPES: ContentType[] = ['post', 'comment', 'chat_message'];
 const ALLOWED_FIELD_NAMES: FieldName[] = ['title', 'content'];
 
 // contentType → 허용 fieldName 조합
 const ALLOWED_COMBOS: Record<ContentType, FieldName[]> = {
   post: ['title', 'content'],
   comment: ['content'],        // comment 에는 title 없음
+  chat_message: ['content'],   // chat_message 에는 content 만 허용
 };
 
 // ─────────────────────────────────────────────

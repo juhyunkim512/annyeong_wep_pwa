@@ -4,7 +4,26 @@
     "community": "Community",
     "services": "Services",
     "help": "Help",
-    "myPage": "My Page"
+    "myPage": "My Page",
+    "chat": "Chat"
+  },
+  "chat": {
+    "title": "Chat",
+    "button": "Message",
+    "empty": "No chats yet",
+    "emptyDesc": "Follow each other to start a conversation",
+    "mutualFollowRequired": "You need to follow each other to send messages.",
+    "followButton": "Follow",
+    "inputPlaceholder": "Type a message...",
+    "menuBlock": "Block",
+    "menuReport": "Report",
+    "menuLeave": "Leave chat",
+    "leaveConfirm": "Leave this chat?",
+    "blockConfirm": "Block this user? Your follow relationship will be removed.",
+    "blocked": "You have blocked this user.",
+    "noMessages": "No messages yet. Say hello!",
+    "sendFailed": "Failed to send message.",
+    "you": "You"
   },
   "common": {
     "loading": "Loading...",

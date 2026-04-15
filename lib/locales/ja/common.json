@@ -1,4 +1,22 @@
 {
+  "chat": {
+    "title": "チャット",
+    "button": "メッセージ",
+    "empty": "チャットはまだありません",
+    "emptyDesc": "お互いフォローすると会話を始められます",
+    "mutualFollowRequired": "メッセージを送るにはお互いフォローが必要です。",
+    "followButton": "フォローする",
+    "inputPlaceholder": "メッセージを入力...",
+    "menuBlock": "ブロック",
+    "menuReport": "通報",
+    "menuLeave": "チャットを退出",
+    "leaveConfirm": "このチャットを退出しますか？",
+    "blockConfirm": "ブロックしますか？フォロー関係が解除されます。",
+    "blocked": "このユーザーをブロックしています。",
+    "noMessages": "まだメッセージがありません。挨拶してみましょう！",
+    "sendFailed": "メッセージの送信に失敗しました。",
+    "you": "自分"
+  },
   "nav": {
     "main": "メイン",
     "community": "コミュニティ",

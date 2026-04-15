@@ -27,7 +27,7 @@ const { Translate } = v2;
 // Types
 // ─────────────────────────────────────────────
 
-export type ContentType = 'post' | 'comment';
+export type ContentType = 'post' | 'comment' | 'chat_message';
 export type FieldName = 'title' | 'content';
 
 export interface TranslationResult {
@@ -207,7 +207,15 @@ export async function getOrTranslateContent(
     );
 
   if (upsertErr) {
-    console.error('[getOrTranslateContent] cache upsert error:', upsertErr.message);
+    console.error('[getOrTranslateContent] cache upsert error:', {
+      message: upsertErr.message,
+      details: upsertErr.details,
+      hint: upsertErr.hint,
+      code: upsertErr.code,
+      contentType,
+      contentId,
+      fieldName,
+    });
     // 캐시 저장 실패해도 번역 결과는 반환
   }
 

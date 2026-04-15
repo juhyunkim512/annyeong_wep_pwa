@@ -1,4 +1,22 @@
 {
+  "chat": {
+    "title": "Chat",
+    "button": "Mensaje",
+    "empty": "Aún no hay chats",
+    "emptyDesc": "Síguense mutuamente para iniciar una conversación",
+    "mutualFollowRequired": "Necesitan seguirse mutuamente para enviar mensajes.",
+    "followButton": "Seguir",
+    "inputPlaceholder": "Escribe un mensaje...",
+    "menuBlock": "Bloquear",
+    "menuReport": "Reportar",
+    "menuLeave": "Salir del chat",
+    "leaveConfirm": "¿Salir de este chat?",
+    "blockConfirm": "¿Bloquear este usuario? Se eliminará la relación de seguimiento.",
+    "blocked": "Has bloqueado a este usuario.",
+    "noMessages": "Aún no hay mensajes. ¡Di hola!",
+    "sendFailed": "Error al enviar el mensaje.",
+    "you": "Tú"
+  },
   "nav": {
     "main": "Principal",
     "community": "Comunidad",

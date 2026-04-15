@@ -60,6 +60,7 @@ export default function DashboardLayout({
   const menuItems = [
     { icon: '🏠', label: t('nav.main'), href: '/dashboard/home' },
     { icon: '💬', label: t('nav.community'), href: '/dashboard/community' },
+    { icon: '✉️', label: t('nav.chat'), href: '/dashboard/chat' },
     { icon: '🛠', label: t('nav.services'), href: '/dashboard/services' },
     { icon: '❓', label: t('nav.help'), href: '/dashboard/help' },
     { icon: '👤', label: t('nav.myPage'), href: '/dashboard/my-page' },

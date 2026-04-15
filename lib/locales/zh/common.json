@@ -1,4 +1,22 @@
 {
+  "chat": {
+    "title": "聊天",
+    "button": "发消息",
+    "empty": "还没有聊天",
+    "emptyDesc": "互相关注后即可开始对话",
+    "mutualFollowRequired": "需要互相关注才能发送消息。",
+    "followButton": "关注",
+    "inputPlaceholder": "输入消息...",
+    "menuBlock": "拉黑",
+    "menuReport": "举报",
+    "menuLeave": "退出聊天",
+    "leaveConfirm": "退出这个聊天？",
+    "blockConfirm": "拉黑此用户？关注关系将被解除。",
+    "blocked": "您已拉黑此用户。",
+    "noMessages": "还没有消息，先打个招呼吧！",
+    "sendFailed": "消息发送失败。",
+    "you": "我"
+  },
   "nav": {
     "main": "主页",
     "community": "社区",

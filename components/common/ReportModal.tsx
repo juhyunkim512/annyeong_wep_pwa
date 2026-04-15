@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 interface ReportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  targetType: 'post' | 'comment';
+  targetType: 'post' | 'comment' | 'user';
   targetId: string;
   onLoginRequired?: () => void;
 }
