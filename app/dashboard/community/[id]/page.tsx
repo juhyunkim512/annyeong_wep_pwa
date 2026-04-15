@@ -119,7 +119,7 @@ export default function PostDetailPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
-  const [commentImage, setCommentImage] = useState<File | null>(null);
+
   const [commentLoading, setCommentLoading] = useState(false);
   const [commentLikeLoading, setCommentLikeLoading] = useState<string | null>(null);
   const [commentLikes, setCommentLikes] = useState<{ [commentId: string]: boolean }>({});
@@ -280,7 +280,7 @@ export default function PostDetailPage() {
   // 댓글 작성
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentText.trim() && !commentImage) return;
+    if (!commentText.trim()) return;
     setCommentLoading(true);
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) {
@@ -288,32 +288,32 @@ export default function PostDetailPage() {
       setCommentLoading(false);
       return;
     }
-    let imageUrl = null;
-    if (commentImage) {
-      // [수정] content-type 명시적 설정 + 실패 로그
-      const fileExt = commentImage.name.split('.').pop()?.toLowerCase() ?? 'jpg';
-      const filePath = `comment-images/${postId}/${crypto.randomUUID()}.${fileExt}`;
-      const contentType = commentImage.type || `image/${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from('comment-images')
-        .upload(filePath, commentImage, { contentType });
-      if (!uploadError) {
-        const { data: urlData } = supabase.storage.from('comment-images').getPublicUrl(filePath);
-        imageUrl = urlData.publicUrl;
-      } else {
-        console.error('[Comment] 이미지 업로드 실패:', uploadError.message, commentImage.name);
-      }
-    }
     await supabase.from("comment").insert({
       post_id: postId,
       author_id: sessionData.session.user.id,
       content: commentText,
-      image_url: imageUrl,
       // [수정] 댓글 작성자의 언어 저장 → 번역 sourceLanguage로 사용
       language: (await supabase.from('profile').select('uselanguage').eq('id', sessionData.session.user.id).maybeSingle()).data?.uselanguage ?? 'english',
     });
+
+    // 글 작성자에게 푸쉬 알림 전송 (본인 글에 댓글 달 때는 제외)
+    if (post && post.author_id !== sessionData.session.user.id) {
+      fetch('/api/push/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
+        body: JSON.stringify({
+          targetUserId: post.author_id,
+          title: 'ANNYEONG - 새 댓글',
+          body: commentText.length > 60 ? commentText.slice(0, 60) + '…' : commentText,
+          url: `/dashboard/community/${postId}`,
+        }),
+      }).catch(() => {});
+    }
+
     setCommentText("");
-    setCommentImage(null);
     setCommentLoading(false);
     setCommentVersion((v) => v + 1); // 댓글 목록 refetch 트리거
   };
@@ -798,42 +798,7 @@ export default function PostDetailPage() {
             )}
             {/* 댓글 작성 */}
             <form onSubmit={handleCommentSubmit} className="mt-6 space-y-2">
-              {commentImage && (
-                <div className="flex items-center gap-2 px-1">
-                  <img
-                    src={URL.createObjectURL(commentImage)}
-                    alt="preview"
-                    className="w-14 h-14 object-cover rounded-lg border border-gray-200"
-                  />
-                  <button
-                    type="button"
-                    className="text-xs text-gray-400 hover:text-red-400 transition"
-                    onClick={() => setCommentImage(null)}
-                  >
-                    {t('community.removeImage')}
-                  </button>
-                </div>
-              )}
               <div className="flex gap-2 items-center">
-                <label className="flex items-center gap-1 cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-500 text-sm px-3 py-2 rounded-lg transition flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                    <circle cx="8.5" cy="8.5" r="1.5"/>
-                    <polyline points="21 15 16 10 5 21"/>
-                  </svg>
-                  <span>{t('community.picture')}</span>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        setCommentImage(e.target.files[0]);
-                      }
-                    }}
-                    disabled={commentLoading || !isLoggedIn}
-                  />
-                </label>
                 <input
                   type="text"
                   value={commentText}
@@ -845,7 +810,7 @@ export default function PostDetailPage() {
                 <button
                   type="submit"
                   className="bg-[#9DB8A0] text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50"
-                  disabled={commentLoading || !isLoggedIn || (!commentText.trim() && !commentImage)}
+                  disabled={commentLoading || !isLoggedIn || !commentText.trim()}
                 >
                   {t('common.send')}
                 </button>

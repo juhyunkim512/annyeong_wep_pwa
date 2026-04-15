@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import '@/lib/i18n'
+import { usePushNotification } from '@/lib/hooks/usePushNotification'
 
 const PULL_THRESHOLD = 72 // px
 
@@ -17,6 +18,9 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { t } = useTranslation('common')
+
+  // 푸쉬 알림 구독 (로그인 상태면 자동 요청)
+  usePushNotification()
 
   // ── Pull-to-refresh ──────────────────────────────────────
   const [pullY, setPullY] = useState(0)
