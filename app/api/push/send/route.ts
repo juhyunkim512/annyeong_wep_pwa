@@ -2,14 +2,20 @@ import { NextResponse } from "next/server";
 import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+let vapidConfigured = false;
+function ensureVapid() {
+  if (vapidConfigured) return;
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT!,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  );
+  vapidConfigured = true;
+}
 
 export async function POST(req: Request) {
   try {
+    ensureVapid();
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json({ success: false }, { status: 401 });
