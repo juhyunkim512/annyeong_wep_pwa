@@ -36,7 +36,7 @@ export function usePushNotification() {
         existing ??
         (await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidKey),
+          applicationServerKey: urlBase64ToUint8Array(vapidKey) as unknown as BufferSource,
         }));
 
       await fetch('/api/push/subscribe', {
