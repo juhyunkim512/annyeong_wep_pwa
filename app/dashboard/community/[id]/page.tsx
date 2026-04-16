@@ -9,51 +9,8 @@ import UserProfileModal from "@/components/common/UserProfileModal";
 import ReportModal from "@/components/common/ReportModal";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { getClientTranslation, setClientTranslation } from "@/lib/utils/clientTranslateCache";
-
-// ── 클라이언트 측 언어 정규화 (서버 LANG_MAP 과 동일) ──────────────
-const LANG_MAP: Record<string, string> = {
-  english: 'en', korean: 'ko', japanese: 'ja',
-  chinese: 'zh', spanish: 'es', vietnamese: 'vi',
-  en: 'en', ko: 'ko', ja: 'ja', zh: 'zh', es: 'es', vi: 'vi',
-  'zh-cn': 'zh', 'zh-tw': 'zh', 'zh-hant': 'zh', 'zh-hans': 'zh',
-};
-function normalizeLang(v?: string | null): string {
-  if (!v) return 'en';
-  return LANG_MAP[v.toLowerCase().trim()] ?? 'en';
-}
-
-// ── /api/translate 호출 헬퍼 (모듈 레벨, 클라이언트 캐시 적용) ─────────────────────────
-async function callTranslate(
-  contentType: 'post' | 'comment',
-  contentId: string,
-  fieldName: 'title' | 'content',
-  sourceText: string,
-  sourceLanguage: string,
-  targetLang: string,
-  accessToken: string,
-  signal: AbortSignal,
-): Promise<{ text: string; isTranslated: boolean }> {
-  const cached = getClientTranslation(contentId, fieldName, targetLang)
-  if (cached) return cached
-  try {
-    const res = await fetch('/api/translate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ contentType, contentId, fieldName, sourceText, sourceLanguage }),
-      signal,
-    });
-    if (!res.ok) return { text: sourceText, isTranslated: false };
-    const result = await res.json()
-    setClientTranslation(contentId, fieldName, result, targetLang)
-    return result
-  } catch {
-    return { text: sourceText, isTranslated: false };
-  }
-}
+import { normalizeLang } from "@/lib/utils/normalizeLang";
+import { batchTranslate } from "@/lib/utils/batchTranslate";
 
 const FLAG_EMOJI_MAP: { [key: string]: string } = {
   korea: "🇰🇷",
@@ -235,48 +192,59 @@ export default function PostDetailPage() {
               const postLangCode = normalizeLang(_post.language);
               const accessToken = freshSession.access_token;
 
-              console.log('[번역] userLang:', userLangCode, 'postLang:', postLangCode);
+              // ── 게시글 + 댓글 번역을 하나의 batch로 처리 ──
+              const batchItems: import('@/lib/utils/batchTranslate').BatchTranslateItem[] = [];
 
-              // ── 게시글 번역 (게시글 언어 ≠ 유저 언어일 때만) ──
+              // 게시글 번역 항목
               if (userLangCode !== postLangCode) {
-                console.log('[번역] 게시글 번역 실행');
-                const [titleRes, contentRes] = await Promise.all([
-                  callTranslate('post', _post.id, 'title', _post.title, _post.language, userLangCode, accessToken, controller.signal),
-                  callTranslate('post', _post.id, 'content', _post.content, _post.language, userLangCode, accessToken, controller.signal),
-                ]);
-                if (!controller.signal.aborted) {
-                  setTranslatedPost({
-                    title: titleRes.isTranslated ? titleRes.text : _post.title,
-                    titleIsTranslated: titleRes.isTranslated,
-                    content: contentRes.isTranslated ? contentRes.text : _post.content,
-                    contentIsTranslated: contentRes.isTranslated,
+                batchItems.push(
+                  { key: `post-title`, contentType: 'post', contentId: _post.id, fieldName: 'title', sourceText: _post.title, sourceLanguage: _post.language },
+                  { key: `post-content`, contentType: 'post', contentId: _post.id, fieldName: 'content', sourceText: _post.content, sourceLanguage: _post.language },
+                );
+              }
+
+              // 댓글 번역 항목 (언어가 다른 것만)
+              for (const c of _comments) {
+                const commentLangCode = normalizeLang(c.language ?? _post.language);
+                if (commentLangCode !== userLangCode) {
+                  batchItems.push({
+                    key: `comment-${c.id}`,
+                    contentType: 'comment',
+                    contentId: c.id,
+                    fieldName: 'content',
+                    sourceText: c.content,
+                    sourceLanguage: c.language ?? _post.language,
                   });
                 }
               }
 
-              // ── 댓글 번역 (각 댓글의 언어를 개별 비교) ──
-              if (_comments.length > 0 && !controller.signal.aborted) {
-                const commentResults = await Promise.all(
-                  _comments.map((c) => {
-                    const commentLangCode = normalizeLang(c.language ?? _post.language);
-                    console.log('[번역] comment', c.id, 'lang:', commentLangCode, 'vs user:', userLangCode);
-                    if (commentLangCode === userLangCode) {
-                      // 동일 언어 → 번역 불필요, 원문 반환
-                      return Promise.resolve({ text: c.content, isTranslated: false });
-                    }
-                    return callTranslate('comment', c.id, 'content', c.content, c.language ?? _post.language, userLangCode, accessToken, controller.signal);
-                  })
-                );
-                if (!controller.signal.aborted) {
-                  const cMap: Record<string, { text: string; isTranslated: boolean }> = {};
-                  _comments.forEach((c, i) => {
-                    cMap[c.id] = {
-                      text: commentResults[i].isTranslated ? commentResults[i].text : c.content,
-                      isTranslated: commentResults[i].isTranslated,
-                    };
+              if (batchItems.length > 0) {
+                const batchResults = await batchTranslate(batchItems, userLangCode, accessToken, controller.signal);
+                if (controller.signal.aborted) return;
+
+                // 게시글 번역 결과 적용
+                const titleRes = batchResults['post-title'];
+                const contentRes = batchResults['post-content'];
+                if (titleRes || contentRes) {
+                  setTranslatedPost({
+                    title: titleRes?.isTranslated ? titleRes.text : _post.title,
+                    titleIsTranslated: titleRes?.isTranslated ?? false,
+                    content: contentRes?.isTranslated ? contentRes.text : _post.content,
+                    contentIsTranslated: contentRes?.isTranslated ?? false,
                   });
-                  setTranslatedComments(cMap);
                 }
+
+                // 댓글 번역 결과 적용
+                const cMap: Record<string, { text: string; isTranslated: boolean }> = {};
+                for (const c of _comments) {
+                  const res = batchResults[`comment-${c.id}`];
+                  if (res) {
+                    cMap[c.id] = { text: res.isTranslated ? res.text : c.content, isTranslated: res.isTranslated };
+                  } else {
+                    cMap[c.id] = { text: c.content, isTranslated: false };
+                  }
+                }
+                setTranslatedComments(cMap);
               }
             } catch (err) {
               console.error('[번역] 실패:', err);

@@ -8,7 +8,8 @@ import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import '@/lib/i18n'
 import { type AppLang } from '@/lib/i18n'
-import { getClientTranslation, setClientTranslation } from '@/lib/utils/clientTranslateCache'
+import { normalizeLang } from '@/lib/utils/normalizeLang'
+import { batchTranslate } from '@/lib/utils/batchTranslate'
 
 const GUIDE_LANGS: { code: AppLang; flag: string; label: string }[] = [
   { code: 'en', flag: '🇺🇸', label: 'English' },
@@ -18,43 +19,6 @@ const GUIDE_LANGS: { code: AppLang; flag: string; label: string }[] = [
   { code: 'vi', flag: '🇻🇳', label: 'Tiếng Việt' },
   { code: 'es', flag: '🇪🇸', label: 'Español' },
 ]
-
-// ── 번역 헬퍼 (모듈 레벨) ─────────────────────────
-const LANG_MAP: Record<string, string> = {
-  english: 'en', korean: 'ko', japanese: 'ja',
-  chinese: 'zh', spanish: 'es', vietnamese: 'vi',
-  en: 'en', ko: 'ko', ja: 'ja', zh: 'zh', es: 'es', vi: 'vi',
-  'zh-cn': 'zh', 'zh-tw': 'zh', 'zh-hant': 'zh', 'zh-hans': 'zh',
-}
-function normalizeLang(v?: string | null): string {
-  if (!v) return 'en'
-  return LANG_MAP[v.toLowerCase().trim()] ?? 'en'
-}
-async function callTranslate(
-  contentId: string,
-  sourceText: string,
-  sourceLanguage: string,
-  targetLang: string,
-  accessToken: string,
-  signal: AbortSignal,
-): Promise<{ text: string; isTranslated: boolean }> {
-  const cached = getClientTranslation(contentId, 'title', targetLang)
-  if (cached) return cached
-  try {
-    const res = await fetch('/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-      body: JSON.stringify({ contentType: 'post', contentId, fieldName: 'title', sourceText, sourceLanguage }),
-      signal,
-    })
-    if (!res.ok) return { text: sourceText, isTranslated: false }
-    const result = await res.json()
-    setClientTranslation(contentId, 'title', result, targetLang)
-    return result
-  } catch {
-    return { text: sourceText, isTranslated: false }
-  }
-}
 
 interface PostSummary {
   id: string
@@ -146,16 +110,29 @@ export default function HomePage() {
             const unique = allPosts.filter((p, i) => allPosts.findIndex((q) => q.id === p.id) === i)
             const toTranslate = unique.filter((p) => normalizeLang(p.language) !== userLang)
             if (toTranslate.length > 0) {
-              const results = await Promise.all(
-                toTranslate.map((p) => callTranslate(p.id, p.title, p.language, userLang, accessToken, controller.signal))
-              )
+              const batchItems = toTranslate.map((p) => ({
+                key: p.id,
+                contentType: 'post' as const,
+                contentId: p.id,
+                fieldName: 'title' as const,
+                sourceText: p.title,
+                sourceLanguage: p.language,
+              }))
+              const batchResults = await batchTranslate(batchItems, userLang, accessToken, controller.signal)
               if (reqRef.current === reqId) {
                 const map: Record<string, string> = {}
-                toTranslate.forEach((p, i) => { if (results[i].isTranslated) map[p.id] = results[i].text })
+                for (const p of toTranslate) {
+                  const res = batchResults[p.id]
+                  if (res?.isTranslated) map[p.id] = res.text
+                }
                 setTranslatedTitles(map)
               }
             }
-          } catch { /* 번역 실패는 무시 */ }
+          } catch (err) {
+            if ((err as Error)?.name !== 'AbortError') {
+              console.warn('[Home] translation batch failed:', err)
+            }
+          }
         })()
       } catch (err) {
         console.error('[Home] fetchPosts error:', err)

@@ -7,12 +7,12 @@
  *
  * POST /api/translate
  * Body (JSON):
- *   contentType     : 'post' | 'comment'
+ *   contentType     : 'post' | 'comment' | 'chat_message'
  *   contentId       : string  (uuid)
  *   fieldName       : 'title' | 'content'
  *   sourceText      : string
  *   sourceLanguage  : string  (e.g. 'korean', 'ko')
- *   ※ targetLanguage 는 body에서 받지 않고 서버에서 profile.uselanguage 로 결정
+ *   targetLanguage  : string  (e.g. 'ko', 'en') — 클라이언트가 전달, 서버에서 allowlist 검증
  *
  * 허용 조합:
  *   post    → title, content
@@ -29,10 +29,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
   getOrTranslateContent,
-  normalizeLang,
   ContentType,
   FieldName,
 } from '@/lib/server/getOrTranslate';
+import { normalizeLang, isSupportedLanguage } from '@/lib/utils/normalizeLang';
 
 // ─────────────────────────────────────────────
 // Allowed value sets
@@ -84,6 +84,7 @@ export async function POST(req: NextRequest) {
     fieldName,
     sourceText,
     sourceLanguage,
+    targetLanguage: rawTargetLanguage,
   } = body as Record<string, string>;
 
   // ── 3. 입력 검증 ───────────────────────────
@@ -124,16 +125,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'sourceLanguage is required' }, { status: 400 });
   }
 
-  // ── 4. targetLanguage: 클라이언트를 믿지 않고 서버에서 profile.uselanguage 조회 ──
-  // service role 로 조회 (RLS 무관하게 안정적으로 읽기 위함)
-  const { data: profile } = await admin
-    .from('profile')
-    .select('uselanguage')
-    .eq('id', user.id)
-    .maybeSingle();
+  // ── 4. targetLanguage: 클라이언트가 전달, 서버에서 allowlist 검증 ──
+  if (!rawTargetLanguage) {
+    return NextResponse.json({ error: 'targetLanguage is required' }, { status: 400 });
+  }
 
-  // profile 이 없거나 uselanguage 가 비어 있으면 'en' fallback
-  const targetLanguage = normalizeLang(profile?.uselanguage ?? 'en');
+  const targetLanguage = normalizeLang(rawTargetLanguage);
+  if (!isSupportedLanguage(targetLanguage)) {
+    return NextResponse.json(
+      { error: `targetLanguage is not supported` },
+      { status: 400 },
+    );
+  }
 
   // ── 5. 번역 실행 ───────────────────────────
   try {

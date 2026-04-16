@@ -61,6 +61,7 @@ export default function UserProfileModal({
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
+  const [followerCount, setFollowerCount] = useState<number>(0);
   const { t } = useTranslation('common');
   const router = useRouter();
 
@@ -106,6 +107,13 @@ export default function UserProfileModal({
         .range(0, 5);
       setPosts((postData || []).slice(0, 5));
       setHasMore((postData || []).length > 5);
+
+      // Follower count
+      const { count: fCount } = await supabase
+        .from('user_follow')
+        .select('id', { count: 'exact', head: true })
+        .eq('following_id', userId);
+      setFollowerCount(fCount ?? 0);
 
       // Block status
       if (currentUserId) {
@@ -323,6 +331,9 @@ export default function UserProfileModal({
                       <span className="text-2xl">{getFlagEmoji(profile.flag)}</span>
                     )}
                   </div>
+                  <span className="text-xs text-gray-500 mt-0.5 block">
+                    {t('friends.followersTab')} {followerCount}
+                  </span>
                   {isBlocked && (
                     <span className="text-xs text-orange-500 mt-1 block">
                       {t('community.youAreBlocked')}

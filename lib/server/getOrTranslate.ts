@@ -20,6 +20,9 @@ import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { v2 } from '@google-cloud/translate';
 import { llmTranslate } from '@/lib/translations/llm';
+import { normalizeLang } from '@/lib/utils/normalizeLang';
+
+export { normalizeLang };
 
 const { Translate } = v2;
 
@@ -35,45 +38,6 @@ export interface TranslationResult {
   isTranslated: boolean;
   sourceLanguage: string; // 정규화된 short code (e.g. 'ko')
   targetLanguage: string; // 정규화된 short code (e.g. 'en')
-}
-
-// ─────────────────────────────────────────────
-// Language code normalization
-// (lib/i18n.ts 의 i18next 초기화 사이드이펙트를 서버에서 피하기 위해 인라인)
-// ─────────────────────────────────────────────
-
-const LANG_MAP: Record<string, string> = {
-  // full-word form (DB 저장값)
-  english: 'en',
-  korean: 'ko',
-  chinese: 'zh',
-  japanese: 'ja',
-  spanish: 'es',
-  vietnamese: 'vi',
-  // short-code form (이미 정규화된 경우)
-  en: 'en',
-  ko: 'ko',
-  zh: 'zh',
-  ja: 'ja',
-  es: 'es',
-  vi: 'vi',
-  // zh 변형 전체 대응 (Google API는 'zh' / 'zh-CN' 매핑)
-  'zh-cn': 'zh',
-  'zh-tw': 'zh',
-  'zh-hant': 'zh',
-  'zh-hans': 'zh',
-  'zh_cn': 'zh',
-  'zh_tw': 'zh',
-};
-
-/**
- * DB 저장값('english', 'korean' 등)단 언어 코드('en', 'ko' 등),
- * zh 변형(zh-CN, zh_TW 등)까지 모두 정규화한다.
- */
-export function normalizeLang(value: string | undefined | null): string {
-  if (!value) return 'en';
-  const lower = value.toLowerCase().trim();
-  return LANG_MAP[lower] ?? 'en';
 }
 
 // ─────────────────────────────────────────────

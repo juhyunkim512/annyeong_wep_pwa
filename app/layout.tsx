@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'ANNYEONG - 안녕 | 외국인을 위한 한국 정착 커뮤니티',
+  title: 'ANNYEONG · Korea Community',
   description:
     '한국에 오는 외국인을 위한 정착 커뮤니티 플랫폼. 비자, 휴대폰, 계좌, 주택, 아르바이트 등 한국 생활에 필요한 모든 정보와 네트워크를 연결해드립니다.',
-  manifest: '/manifest.json',
+  manifest: '/site.webmanifest',
   keywords: [
     '유학생',
     '어학연수',
@@ -30,16 +30,23 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'annyeong',
+    title: 'ANNYEONG',
   },
   icons: {
-    apple: '/icons/icon-192x192.png',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
   },
 }
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   themeColor: '#6B9E8A',
 }
 

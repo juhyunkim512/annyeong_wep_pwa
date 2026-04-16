@@ -1,13 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import WritePostModal from '@/components/common/WritePostModal';
 import LoginModal from '@/components/common/LoginModal';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
-import { getClientTranslation, setClientTranslation } from '@/lib/utils/clientTranslateCache';
+import { normalizeLang } from '@/lib/utils/normalizeLang';
+import { batchTranslate } from '@/lib/utils/batchTranslate';
 
 interface Post {
   id: string;
@@ -22,41 +23,6 @@ interface Post {
 }
 
 // ── 번역 헬퍼 (모듈 레벨) ─────────────────────────
-const LANG_MAP: Record<string, string> = {
-  english: 'en', korean: 'ko', japanese: 'ja',
-  chinese: 'zh', spanish: 'es', vietnamese: 'vi',
-  en: 'en', ko: 'ko', ja: 'ja', zh: 'zh', es: 'es', vi: 'vi',
-  'zh-cn': 'zh', 'zh-tw': 'zh', 'zh-hant': 'zh', 'zh-hans': 'zh',
-};
-function normalizeLang(v?: string | null): string {
-  if (!v) return 'en';
-  return LANG_MAP[v.toLowerCase().trim()] ?? 'en';
-}
-async function callTranslate(
-  contentId: string,
-  sourceText: string,
-  sourceLanguage: string,
-  targetLang: string,
-  accessToken: string,
-  signal: AbortSignal,
-): Promise<{ text: string; isTranslated: boolean }> {
-  const cached = getClientTranslation(contentId, 'title', targetLang)
-  if (cached) return cached
-  try {
-    const res = await fetch('/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-      body: JSON.stringify({ contentType: 'post', contentId, fieldName: 'title', sourceText, sourceLanguage }),
-      signal,
-    });
-    if (!res.ok) return { text: sourceText, isTranslated: false };
-    const result = await res.json()
-    setClientTranslation(contentId, 'title', result, targetLang)
-    return result
-  } catch {
-    return { text: sourceText, isTranslated: false };
-  }
-}
 
 export default function CommunityPage() {
   const { t } = useTranslation('common');
@@ -92,6 +58,12 @@ export default function CommunityPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
   const [translatedTitles, setTranslatedTitles] = useState<Record<string, string>>({});
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const cursorRef = useRef<string | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -99,78 +71,119 @@ export default function CommunityPage() {
     });
   }, []);
 
+  // ── 번역 헬퍼 ──
+  const translatePosts = useCallback(async (postList: Post[], signal: AbortSignal) => {
+    try {
+      if (signal.aborted) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || signal.aborted) return;
+      const { data: userProfile } = await supabase
+        .from('profile')
+        .select('uselanguage')
+        .eq('id', session.user.id)
+        .maybeSingle();
+      const userLang = normalizeLang(userProfile?.uselanguage);
+      const accessToken = session.access_token;
+      const toTranslate = postList
+        .filter((p) => normalizeLang(p.language) !== userLang)
+        .slice(0, 30);
+      if (toTranslate.length > 0) {
+        const items = toTranslate.map((p) => ({
+          key: p.id,
+          contentType: 'post' as const,
+          contentId: p.id,
+          fieldName: 'title' as const,
+          sourceText: p.title,
+          sourceLanguage: p.language,
+        }));
+        const results = await batchTranslate(items, userLang, accessToken);
+        if (!signal.aborted) {
+          const map: Record<string, string> = {};
+          for (const [key, r] of Object.entries(results)) { if (r.isTranslated) map[key] = r.text; }
+          setTranslatedTitles((prev) => ({ ...prev, ...map }));
+        }
+      }
+    } catch { /* 번역 실패는 무시 */ }
+  }, []);
+
+  // ── 게시글 fetchPosts (cursor pagination) ──
+  const fetchPosts = useCallback(async (cursor: string | null, signal: AbortSignal) => {
+    let query = supabase
+      .from('post')
+      .select('id, title, category, language, author_id, created_at, like_count, comment_count, public_profile(nickname)')
+      .order('created_at', { ascending: false })
+      .limit(PAGE_SIZE);
+    if (activeCategory) query = query.eq('category', activeCategory);
+    if (cursor) query = query.lt('created_at', cursor);
+    const { data, error } = await query;
+    if (signal.aborted) return null;
+    if (error) throw error;
+    const normalized = (data || []).map((p: any) => ({
+      ...p,
+      nickname: Array.isArray(p.public_profile) ? p.public_profile[0]?.nickname : p.public_profile?.nickname ?? null,
+    }));
+    return normalized;
+  }, [activeCategory]);
+
+  // ── 초기 로드 + 카테고리 / 리프레시 변경 시 ──
   useEffect(() => {
     const controller = new AbortController();
-    const fetchPosts = async () => {
+    cursorRef.current = null;
+    setHasMore(true);
+    setTranslatedTitles({});
+
+    (async () => {
       setLoading(true);
       setError('');
       try {
-        // category는 DB에서 필터, limit 50
-        let query = supabase
-          .from('post')
-          .select('id, title, category, language, author_id, created_at, like_count, comment_count, public_profile(nickname)')
-          .order('created_at', { ascending: false })
-          .limit(50);
-        if (activeCategory) {
-          query = query.eq('category', activeCategory);
-        }
-        const { data, error } = await query;
-
-        if (controller.signal.aborted) return;
-
-        if (error) {
-          console.error('[Community] fetchPosts error:', error);
-          setError('Failed to load posts');
-          setPosts([]);
-        } else {
-          const normalized = (data || []).map((p: any) => ({
-            ...p,
-            nickname: Array.isArray(p.public_profile) ? p.public_profile[0]?.nickname : p.public_profile?.nickname ?? null,
-          }));
-          setPosts(normalized);
-          setLoading(false);
-
-          // ── 번역: 완전히 분리된 비동기 컨텍스트 (I18nProvider auth 충돌 방지) ──
-          void (async () => {
-            try {
-              if (controller.signal.aborted) return;
-              const { data: { session } } = await supabase.auth.getSession();
-              if (!session || controller.signal.aborted) return;
-              const { data: userProfile } = await supabase
-                .from('profile')
-                .select('uselanguage')
-                .eq('id', session.user.id)
-                .maybeSingle();
-              const userLang = normalizeLang(userProfile?.uselanguage);
-              const accessToken = session.access_token;
-              const toTranslate = normalized
-                .filter((p) => normalizeLang(p.language) !== userLang)
-                .slice(0, 30);
-              if (toTranslate.length > 0) {
-                const results = await Promise.all(
-                  toTranslate.map((p) => callTranslate(p.id, p.title, p.language, userLang, accessToken, controller.signal))
-                );
-                if (!controller.signal.aborted) {
-                  const map: Record<string, string> = {};
-                  toTranslate.forEach((p, i) => { if (results[i].isTranslated) map[p.id] = results[i].text; });
-                  setTranslatedTitles(map);
-                }
-              }
-            } catch { /* 번역 실패는 무시 */ }
-          })()
-        }
+        const result = await fetchPosts(null, controller.signal);
+        if (!result || controller.signal.aborted) return;
+        setPosts(result);
+        setHasMore(result.length >= PAGE_SIZE);
+        if (result.length > 0) cursorRef.current = result[result.length - 1].created_at;
+        void translatePosts(result, controller.signal);
       } catch (err) {
         if ((err as any)?.name === 'AbortError') return;
-        console.error('[Community] fetchPosts exception:', err);
+        console.error('[Community] fetchPosts error:', err);
         setError('Failed to load posts');
         setPosts([]);
       } finally {
         setLoading(false);
       }
-    };
-    fetchPosts();
+    })();
     return () => controller.abort();
-  }, [refreshCount, activeCategory]);
+  }, [refreshCount, activeCategory, fetchPosts, translatePosts]);
+
+  // ── 다음 페이지 로드 ──
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || !cursorRef.current) return;
+    setLoadingMore(true);
+    const controller = new AbortController();
+    try {
+      const result = await fetchPosts(cursorRef.current, controller.signal);
+      if (!result || controller.signal.aborted) return;
+      setPosts((prev) => [...prev, ...result]);
+      setHasMore(result.length >= PAGE_SIZE);
+      if (result.length > 0) cursorRef.current = result[result.length - 1].created_at;
+      void translatePosts(result, controller.signal);
+    } catch (err) {
+      console.error('[Community] loadMore error:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, fetchPosts, translatePosts]);
+
+  // ── IntersectionObserver 무한스크롤 ──
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMore(); },
+      { rootMargin: '200px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   const handleWriteClick = () => {
     if (!isLoggedIn) {
@@ -179,8 +192,6 @@ export default function CommunityPage() {
       setIsWriteOpen(true);
     }
   };
-
-  const filteredPosts = posts;
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -212,12 +223,13 @@ export default function CommunityPage() {
           <div className="text-center py-8 text-gray-400">{t('common.loading')}</div>
         ) : error ? (
           <div className="text-center py-8 text-red-500">{t('community.failedToLoad')}</div>
-        ) : filteredPosts.length === 0 ? (
+        ) : posts.length === 0 ? (
           <div className="text-center py-8 text-gray-400">
             {t('community.noPostsYet')}
           </div>
         ) : (
-          filteredPosts.map((post) => (
+          <>
+            {posts.map((post) => (
             <Link href={`/dashboard/community/${post.id}`} key={post.id}>
               <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition cursor-pointer">
                 <div className="flex justify-between items-start gap-4">
@@ -239,7 +251,16 @@ export default function CommunityPage() {
                 </div>
               </div>
             </Link>
-          ))
+          ))}
+            {/* 무한스크롤 sentinel */}
+            <div ref={sentinelRef} />
+            {loadingMore && (
+              <div className="text-center py-4 text-gray-400 text-sm">{t('common.loading')}</div>
+            )}
+            {!hasMore && posts.length > 0 && (
+              <div className="text-center py-4 text-gray-300 text-xs">{t('community.noMorePosts', '더 이상 게시글이 없습니다')}</div>
+            )}
+          </>
         )}
       </div>
 

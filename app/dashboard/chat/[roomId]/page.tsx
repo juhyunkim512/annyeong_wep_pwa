@@ -7,6 +7,8 @@ import AvatarImage from '@/components/common/AvatarImage';
 import ReportModal from '@/components/common/ReportModal';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
+import { normalizeLang } from '@/lib/utils/normalizeLang';
+import { batchTranslate } from '@/lib/utils/batchTranslate';
 
 // ─────────────────────────────────────────────
 // Types
@@ -40,14 +42,6 @@ const FLAG_EMOJI_MAP: Record<string, string> = {
   vietnam: '🇻🇳', spain: '🇪🇸', france: '🇫🇷', germany: '🇩🇪',
   thailand: '🇹🇭', philippines: '🇵🇭',
 };
-
-const LANG_MAP: Record<string, string> = {
-  english: 'en', korean: 'ko', chinese: 'zh', japanese: 'ja',
-  spanish: 'es', vietnamese: 'vi',
-  en: 'en', ko: 'ko', zh: 'zh', ja: 'ja', es: 'es', vi: 'vi',
-};
-const normalizeLang = (v: string | null | undefined) =>
-  LANG_MAP[(v ?? '').toLowerCase()] ?? 'en';
 
 // ─────────────────────────────────────────────
 // In-memory translation cache
@@ -105,36 +99,29 @@ export default function ChatRoomPage() {
 
     if (toTranslate.length === 0) { translatingRef.current = false; return; }
 
-    const results = await Promise.all(
-      toTranslate.map(async (m) => {
-        const cacheKey = `${m.id}:${userLang}`;
-        try {
-          const res = await fetch('/api/translate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({
-              contentType: 'chat_message',
-              contentId: m.id,
-              fieldName: 'content',
-              sourceText: m.content,
-              sourceLanguage: m.language ?? 'english',
-            }),
-          });
-          if (!res.ok) return null;
-          const data = await res.json();
-          if (data.isTranslated) {
-            _translationCache.set(cacheKey, data.text);
-            return { id: m.id, text: data.text };
-          }
-          return null;
-        } catch { return null; }
-      })
-    );
+    try {
+      const items = toTranslate.map((m) => ({
+        key: m.id,
+        contentType: 'chat_message' as const,
+        contentId: m.id,
+        fieldName: 'content' as const,
+        sourceText: m.content,
+        sourceLanguage: m.language ?? 'english',
+      }));
+      const results = await batchTranslate(items, userLang, token);
 
-    const newMap: Record<string, string> = {};
-    results.forEach((r) => { if (r) newMap[r.id] = r.text; });
-    if (Object.keys(newMap).length > 0) {
-      setTranslatedMap((prev) => ({ ...prev, ...newMap }));
+      const newMap: Record<string, string> = {};
+      for (const [key, r] of Object.entries(results)) {
+        if (r.isTranslated) {
+          _translationCache.set(`${key}:${userLang}`, r.text);
+          newMap[key] = r.text;
+        }
+      }
+      if (Object.keys(newMap).length > 0) {
+        setTranslatedMap((prev) => ({ ...prev, ...newMap }));
+      }
+    } catch (err) {
+      console.error('[Chat] batch translate error:', err);
     }
     translatingRef.current = false;
   }, []);
@@ -282,9 +269,9 @@ export default function ChatRoomPage() {
           m.id === tempId ? { ...data, pending: false, failed: false } : m
         );
       });
-      supabase
+      await supabase
         .from('chat_room')
-        .update({ last_message: text, last_message_at: new Date().toISOString() })
+        .update({ last_message: text, last_message_at: data.created_at })
         .eq('id', roomId);
     }
     inputRef.current?.focus();

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import AvatarImage from '@/components/common/AvatarImage';
+import LoginModal from '@/components/common/LoginModal';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
 
@@ -29,6 +30,7 @@ export default function ChatListPage() {
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [myId, setMyId] = useState<string | null>(null);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -52,7 +54,7 @@ export default function ChatListPage() {
       );
 
       const others = visible.map((r) => (r.user_a === uid ? r.user_b : r.user_a));
-      if (others.length === 0) { setLoading(false); return; }
+      if (others.length === 0) { setRooms([]); setLoading(false); return; }
 
       const { data: profiles } = await supabase
         .from('profile')
@@ -79,6 +81,89 @@ export default function ChatListPage() {
     fetchRooms();
   }, [t]);
 
+  // ─── Realtime: chat_room 변경 시 목록 갱신 ───
+  useEffect(() => {
+    if (!myId) return;
+    const channel = supabase
+      .channel('chat_list_updates')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'chat_room' },
+        (payload) => {
+          const updated = payload.new as {
+            id: string; user_a: string; user_b: string;
+            last_message: string | null; last_message_at: string | null;
+            user_a_hidden: boolean; user_b_hidden: boolean;
+          };
+          // 내가 참여한 방만 처리
+          if (updated.user_a !== myId && updated.user_b !== myId) return;
+          // 숨긴 방이면 목록에서 제거
+          const isHidden =
+            (updated.user_a === myId && updated.user_a_hidden) ||
+            (updated.user_b === myId && updated.user_b_hidden);
+          setRooms((prev) => {
+            if (isHidden) return prev.filter((r) => r.id !== updated.id);
+            const existing = prev.find((r) => r.id === updated.id);
+            if (existing) {
+              const next = prev.map((r) =>
+                r.id === updated.id
+                  ? { ...r, last_message: updated.last_message, last_message_at: updated.last_message_at }
+                  : r
+              );
+              return next.sort((a, b) =>
+                (b.last_message_at ?? '').localeCompare(a.last_message_at ?? '')
+              );
+            }
+            return prev; // 새 방은 INSERT 이벤트에서 처리 (아래)
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_room' },
+        async (payload) => {
+          const newRoom = payload.new as {
+            id: string; user_a: string; user_b: string;
+            last_message: string | null; last_message_at: string | null;
+          };
+          if (newRoom.user_a !== myId && newRoom.user_b !== myId) return;
+          const otherId = newRoom.user_a === myId ? newRoom.user_b : newRoom.user_a;
+          const { data: profile } = await supabase
+            .from('profile').select('id, nickname, flag, image_url')
+            .eq('id', otherId).maybeSingle();
+          setRooms((prev) => {
+            if (prev.some((r) => r.id === newRoom.id)) return prev;
+            const room: ChatRoom = {
+              id: newRoom.id,
+              other_user_id: otherId,
+              other_nickname: profile?.nickname ?? t('common.unknown'),
+              other_flag: profile?.flag ?? null,
+              other_image_url: profile?.image_url ?? null,
+              last_message: newRoom.last_message,
+              last_message_at: newRoom.last_message_at,
+            };
+            return [room, ...prev];
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_message' },
+        (payload) => {
+          const msg = payload.new as { room_id: string; content: string; created_at: string };
+          setRooms((prev) => {
+            const idx = prev.findIndex((r) => r.id === msg.room_id);
+            if (idx === -1) return prev;
+            const updated = { ...prev[idx], last_message: msg.content, last_message_at: msg.created_at };
+            const next = [updated, ...prev.filter((r) => r.id !== msg.room_id)];
+            return next;
+          });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [myId, t]);
+
   const timeAgo = (dateStr: string | null) => {
     if (!dateStr) return '';
     const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
@@ -95,7 +180,18 @@ export default function ChatListPage() {
       {loading ? (
         <div className="text-center py-12 text-gray-400">{t('common.loading')}</div>
       ) : !myId ? (
-        <div className="text-center py-12 text-gray-400">{t('auth.loginRequired')}</div>
+        <div className="mt-8">
+          <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+            <h2 className="text-lg font-bold mb-4">{t('auth.loginRequiredDesc')}</h2>
+            <button
+              className="bg-[#9DB8A0] text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90"
+              onClick={() => setIsLoginOpen(true)}
+            >
+              {t('auth.login')}
+            </button>
+          </div>
+          <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+        </div>
       ) : rooms.length === 0 ? (
         <div className="text-center py-16">
           <div className="text-5xl mb-4">✉️</div>
