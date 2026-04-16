@@ -37,8 +37,8 @@ interface GatherMapPickerProps {
 
 export function GatherMapPicker({ onSelect, hint }: GatherMapPickerProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<google.maps.Map | null>(null);
-  const markerInstance = useRef<google.maps.Marker | null>(null);
+  const mapInstance = useRef<any>(null);
+  const markerInstance = useRef<any>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export function GatherMapPicker({ onSelect, hint }: GatherMapPickerProps) {
 
     // 서울 중심
     const center = { lat: 37.5665, lng: 126.978 };
-    const map = new google.maps.Map(mapRef.current, {
+    const map = new (window as any).google.maps.Map(mapRef.current, {
       center,
       zoom: 13,
       disableDefaultUI: true,
@@ -63,7 +63,7 @@ export function GatherMapPicker({ onSelect, hint }: GatherMapPickerProps) {
     });
     mapInstance.current = map;
 
-    map.addListener('click', (e: google.maps.MapMouseEvent) => {
+    map.addListener('click', (e: any) => {
       if (!e.latLng) return;
       const lat = e.latLng.lat();
       const lng = e.latLng.lng();
@@ -71,15 +71,15 @@ export function GatherMapPicker({ onSelect, hint }: GatherMapPickerProps) {
       if (markerInstance.current) {
         markerInstance.current.setPosition(e.latLng);
       } else {
-        markerInstance.current = new google.maps.Marker({
+        markerInstance.current = new (window as any).google.maps.Marker({
           position: e.latLng,
           map,
         });
       }
 
       // Geocode로 주소 가져오기
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ location: e.latLng }, (results, status) => {
+      const geocoder = new (window as any).google.maps.Geocoder();
+      geocoder.geocode({ location: e.latLng }, (results: any, status: any) => {
         let label = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
         if (status === 'OK' && results && results[0]) {
           label = results[0].formatted_address;
@@ -132,8 +132,8 @@ interface GatherMapViewProps {
 
 export function GatherMapView({ pins, onPinClick }: GatherMapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
+  const mapInstance = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -146,7 +146,7 @@ export function GatherMapView({ pins, onPinClick }: GatherMapViewProps) {
     if (!ready || !mapRef.current) return;
 
     if (!mapInstance.current) {
-      mapInstance.current = new google.maps.Map(mapRef.current, {
+      mapInstance.current = new (window as any).google.maps.Map(mapRef.current, {
         center: { lat: 37.5665, lng: 126.978 },
         zoom: 12,
         disableDefaultUI: true,
@@ -167,7 +167,7 @@ export function GatherMapView({ pins, onPinClick }: GatherMapViewProps) {
 
     pins.forEach((pin) => {
       if (!pin.lat || !pin.lng) return;
-      const marker = new google.maps.Marker({
+      const marker = new (window as any).google.maps.Marker({
         position: { lat: pin.lat, lng: pin.lng },
         map: mapInstance.current!,
         title: pin.title,
@@ -177,7 +177,7 @@ export function GatherMapView({ pins, onPinClick }: GatherMapViewProps) {
         },
       });
 
-      const infoWindow = new google.maps.InfoWindow({
+      const infoWindow = new (window as any).google.maps.InfoWindow({
         content: `<div style="font-size:13px;max-width:180px">
           <strong>${pin.title}</strong><br/>
           <span style="color:#666">${pin.participant_count}/${pin.max_participants}명</span>
@@ -194,7 +194,7 @@ export function GatherMapView({ pins, onPinClick }: GatherMapViewProps) {
 
     // 핀들 기반으로 지도 범위 조절
     if (pins.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
+      const bounds = new (window as any).google.maps.LatLngBounds();
       pins.forEach((p) => {
         if (p.lat && p.lng) bounds.extend({ lat: p.lat, lng: p.lng });
       });
