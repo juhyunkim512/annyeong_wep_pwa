@@ -25,6 +25,30 @@ function getOpenAIClient(): OpenAI {
 }
 
 // ─────────────────────────────────────────────
+// Concurrency limiter — OpenAI 429 rate limit 방지
+// ─────────────────────────────────────────────
+
+const MAX_CONCURRENT = 3;
+let _running = 0;
+const _queue: Array<() => void> = [];
+
+async function withConcurrencyLimit<T>(fn: () => Promise<T>): Promise<T> {
+  if (_running >= MAX_CONCURRENT) {
+    await new Promise<void>((resolve) => _queue.push(resolve));
+  }
+  _running++;
+  try {
+    return await fn();
+  } finally {
+    _running--;
+    if (_queue.length > 0) {
+      const next = _queue.shift()!;
+      next();
+    }
+  }
+}
+
+// ─────────────────────────────────────────────
 // Language name map (short code → full name for prompt)
 // ─────────────────────────────────────────────
 
@@ -93,7 +117,7 @@ export async function llmTranslate(
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const result = await callOpenAI(text, sourceLang, targetLang);
+      const result = await withConcurrencyLimit(() => callOpenAI(text, sourceLang, targetLang));
       if (!result) {
         console.warn('[llmTranslate] empty result from OpenAI');
         return null;

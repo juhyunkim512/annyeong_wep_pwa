@@ -5,7 +5,8 @@
     "services": "서비스",
     "help": "도움말",
     "myPage": "마이페이지",
-    "chat": "채팅"
+    "chat": "채팅",
+    "gather": "모여라"
   },
   "chat": {
     "title": "채팅",
@@ -23,6 +24,7 @@
     "blocked": "차단한 사용자입니다.",
     "noMessages": "아직 메시지가 없어요. 먼저 인사해 보세요!",
     "sendFailed": "메시지 전송에 실패했습니다.",
+    "gatherCreated": "모임 단톡이 생성되었습니다.",
     "you": "나"
   },
   "common": {
@@ -534,6 +536,89 @@
     "cta": {
       "home": "홈으로",
       "signUp": "회원가입"
+    }
+  },
+  "gather": {
+    "title": "모여라",
+    "writeGather": "모임 만들기",
+    "noGatherings": "아직 모임이 없어요.",
+    "mapView": "지도로 보기",
+    "listView": "리스트로 보기",
+    "timeLeft": "{{minutes}}분 남음",
+    "timeLeftHour": "{{hours}}시간 {{minutes}}분 남음",
+    "expired": "마감됨",
+    "participants": "{{current}}/{{max}}명",
+    "detail": {
+      "title": "모임 상세",
+      "location": "위치",
+      "meetTime": "만나는 시간",
+      "timeRemaining": "남은 시간",
+      "participants": "참석자",
+      "join": "참석하기",
+      "joined": "참석 중",
+      "leave": "참석 취소",
+      "full": "인원 마감",
+      "loginRequired": "참석하려면 로그인이 필요합니다.",
+      "deleteConfirm": "이 모임을 삭제하시겠습니까?",
+      "delete": "모임 삭제",
+      "myGathering": "내 모임",
+      "confirm": "모임 확정",
+      "confirming": "확정 중...",
+      "confirmed": "모임이 확정되었습니다! 단톡방이 생성되었어요.",
+      "confirmedBadge": "확정된 모임 🎉",
+      "confirmDesc": "확정하면 참석자 전원이 참여하는 임시 단톡방이 만들어집니다.",
+      "chatCreated": "단톡방으로 이동"
+    },
+    "write": {
+      "title": "모임 만들기",
+      "category": "주제",
+      "categoryPlaceholder": "주제를 선택하세요",
+      "postTitle": "제목",
+      "postTitlePlaceholder": "예: 홍대에서 맥주 한잔 하실 분",
+      "content": "내용",
+      "contentPlaceholder": "간단한 설명을 적어주세요",
+      "location": "위치",
+      "quickLocation": "빠른 선택",
+      "mapLocation": "지도에서 선택",
+      "meetTime": "시간",
+      "meetTimeNow": "지금",
+      "meetTime30": "30분 뒤",
+      "meetTime60": "1시간 뒤",
+      "meetTimeCustom": "직접 선택",
+      "maxParticipants": "최대 인원",
+      "maxParticipantsUnit": "명",
+      "submit": "등록",
+      "saving": "등록 중...",
+      "fillRequired": "모든 필수 항목을 입력해 주세요.",
+      "failed": "모임 등록에 실패했습니다.",
+      "selectLocation": "위치를 선택하세요",
+      "tapToSelectLocation": "지도를 눌러 위치를 선택하세요"
+    },
+    "categories": {
+      "language": "언어교환 🗣️",
+      "drink": "술 🍺",
+      "sports": "운동 💪",
+      "food": "음식/카페 ☕",
+      "talk": "토크 💬",
+      "game": "게임 🎮",
+      "pet": "반려동물 🐾",
+      "travel": "여행 ✈️",
+      "sing": "노래 🎤",
+      "movie": "영화 🎬",
+      "etc": "기타 📌"
+    },
+    "locations": {
+      "hongdae": "홍대입구역",
+      "hapjeong": "합정",
+      "itaewon": "이태원",
+      "gangnam": "강남역",
+      "kondae": "건대입구",
+      "seongsu": "성수"
+    },
+    "groupChat": {
+      "title": "모여라 단톡",
+      "expired": "이 단톡방은 약속 시간이 지나 종료되었습니다.",
+      "expiresAt": "{{time}}까지 열려있는 임시 단톡방입니다"
     }
   }
 }

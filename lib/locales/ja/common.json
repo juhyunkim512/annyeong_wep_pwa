@@ -15,6 +15,7 @@
     "blocked": "このユーザーをブロックしています。",
     "noMessages": "まだメッセージがありません。挨拶してみましょう！",
     "sendFailed": "メッセージの送信に失敗しました。",
+    "gatherCreated": "グループチャットが作成されました。",
     "you": "自分"
   },
   "nav": {
@@ -22,7 +23,9 @@
     "community": "コミュニティ",
     "services": "サービス",
     "help": "ヘルプ",
-    "myPage": "マイページ"
+    "myPage": "マイページ",
+    "chat": "チャット",
+    "gather": "集まれ"
   },
   "common": {
     "loading": "読み込み中...",
@@ -535,6 +538,89 @@
     "cta": {
       "home": "ホームへ",
       "signUp": "会員登録"
+    }
+  },
+  "gather": {
+    "title": "集まれ",
+    "writeGather": "集まりを作る",
+    "noGatherings": "まだ集まりがありません。",
+    "mapView": "地図で見る",
+    "listView": "リストで見る",
+    "timeLeft": "{{minutes}}分残り",
+    "timeLeftHour": "{{hours}}時間{{minutes}}分残り",
+    "expired": "終了",
+    "participants": "{{current}}/{{max}}人",
+    "detail": {
+      "title": "集まり詳細",
+      "location": "場所",
+      "meetTime": "集合時間",
+      "timeRemaining": "残り時間",
+      "participants": "参加者",
+      "join": "参加する",
+      "joined": "参加中",
+      "leave": "参加取消",
+      "full": "定員満了",
+      "loginRequired": "参加するにはログインが必要です。",
+      "deleteConfirm": "この集まりを削除しますか？",
+      "delete": "集まりを削除",
+      "myGathering": "自分の集まり",
+      "confirm": "集まり確定",
+      "confirming": "確定中...",
+      "confirmed": "集まりが確定しました！グループチャットが作成されました。",
+      "confirmedBadge": "確定済み 🎉",
+      "confirmDesc": "確定すると参加者全員の一時グループチャットが作成されます。",
+      "chatCreated": "グループチャットへ"
+    },
+    "write": {
+      "title": "集まりを作る",
+      "category": "テーマ",
+      "categoryPlaceholder": "テーマを選択",
+      "postTitle": "タイトル",
+      "postTitlePlaceholder": "例：弘大でビール飲みませんか",
+      "content": "内容",
+      "contentPlaceholder": "簡単な説明を書いてください",
+      "location": "場所",
+      "quickLocation": "クイック選択",
+      "mapLocation": "地図で選択",
+      "meetTime": "時間",
+      "meetTimeNow": "今",
+      "meetTime30": "30分後",
+      "meetTime60": "1時間後",
+      "meetTimeCustom": "直接選択",
+      "maxParticipants": "最大人数",
+      "maxParticipantsUnit": "人",
+      "submit": "登録",
+      "saving": "登録中...",
+      "fillRequired": "すべての必須項目を入力してください。",
+      "failed": "集まりの登録に失敗しました。",
+      "selectLocation": "場所を選択してください",
+      "tapToSelectLocation": "地図をタップして場所を選択"
+    },
+    "categories": {
+      "language": "言語交換 🗣️",
+      "drink": "飲み 🍺",
+      "sports": "運動 💪",
+      "food": "食事/カフェ ☕",
+      "talk": "トーク 💬",
+      "game": "ゲーム 🎮",
+      "pet": "ペット 🐾",
+      "travel": "旅行 ✈️",
+      "sing": "カラオケ 🎤",
+      "movie": "映画 🎬",
+      "etc": "その他 📌"
+    },
+    "locations": {
+      "hongdae": "弘大入口",
+      "hapjeong": "合井",
+      "itaewon": "梨泰院",
+      "gangnam": "江南",
+      "kondae": "建大入口",
+      "seongsu": "聖水"
+    },
+    "groupChat": {
+      "title": "集まれチャット",
+      "expired": "集合時間が過ぎたため、このチャットは終了しました。",
+      "expiresAt": "{{time}}まで開いている一時チャットです"
     }
   }
 }

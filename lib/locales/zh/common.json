@@ -15,6 +15,7 @@
     "blocked": "您已拉黑此用户。",
     "noMessages": "还没有消息，先打个招呼吧！",
     "sendFailed": "消息发送失败。",
+    "gatherCreated": "群聊已创建。",
     "you": "我"
   },
   "nav": {
@@ -22,7 +23,9 @@
     "community": "社区",
     "services": "服务",
     "help": "帮助",
-    "myPage": "我的主页"
+    "myPage": "我的主页",
+    "chat": "聊天",
+    "gather": "聚会"
   },
   "common": {
     "loading": "加载中...",
@@ -533,6 +536,89 @@
     "cta": {
       "home": "前往首页",
       "signUp": "注册"
+    }
+  },
+  "gather": {
+    "title": "聚会",
+    "writeGather": "创建聚会",
+    "noGatherings": "还没有聚会。",
+    "mapView": "地图查看",
+    "listView": "列表查看",
+    "timeLeft": "剩余{{minutes}}分钟",
+    "timeLeftHour": "剩余{{hours}}小时{{minutes}}分钟",
+    "expired": "已结束",
+    "participants": "{{current}}/{{max}}人",
+    "detail": {
+      "title": "聚会详情",
+      "location": "地点",
+      "meetTime": "见面时间",
+      "timeRemaining": "剩余时间",
+      "participants": "参与者",
+      "join": "参加",
+      "joined": "已参加",
+      "leave": "取消参加",
+      "full": "已满",
+      "loginRequired": "需要登录才能参加。",
+      "deleteConfirm": "确定删除此聚会？",
+      "delete": "删除聚会",
+      "myGathering": "我的聚会",
+      "confirm": "确认聚会",
+      "confirming": "确认中...",
+      "confirmed": "聚会已确认！群聊已创建。",
+      "confirmedBadge": "已确认 🎉",
+      "confirmDesc": "确认后将为所有参与者创建临时群聊。",
+      "chatCreated": "前往群聊"
+    },
+    "write": {
+      "title": "创建聚会",
+      "category": "主题",
+      "categoryPlaceholder": "选择主题",
+      "postTitle": "标题",
+      "postTitlePlaceholder": "例：弘大一起喝啤酒吗？",
+      "content": "内容",
+      "contentPlaceholder": "简要描述",
+      "location": "地点",
+      "quickLocation": "快速选择",
+      "mapLocation": "在地图上选择",
+      "meetTime": "时间",
+      "meetTimeNow": "现在",
+      "meetTime30": "30分钟后",
+      "meetTime60": "1小时后",
+      "meetTimeCustom": "自定义",
+      "maxParticipants": "最多人数",
+      "maxParticipantsUnit": "人",
+      "submit": "创建",
+      "saving": "创建中...",
+      "fillRequired": "请填写所有必填项。",
+      "failed": "创建聚会失败。",
+      "selectLocation": "请选择地点",
+      "tapToSelectLocation": "点击地图选择地点"
+    },
+    "categories": {
+      "language": "语言交换 🗣️",
+      "drink": "喝酒 🍺",
+      "sports": "运动 💪",
+      "food": "美食/咖啡 ☕",
+      "talk": "聊天 💬",
+      "game": "游戏 🎮",
+      "pet": "宠物 🐾",
+      "travel": "旅行 ✈️",
+      "sing": "唱歌 🎤",
+      "movie": "电影 🎬",
+      "etc": "其他 📌"
+    },
+    "locations": {
+      "hongdae": "弘大入口",
+      "hapjeong": "合井",
+      "itaewon": "梨泰院",
+      "gangnam": "江南",
+      "kondae": "建大入口",
+      "seongsu": "圣水"
+    },
+    "groupChat": {
+      "title": "聚会群聊",
+      "expired": "见面时间已过，此群聊已结束。",
+      "expiresAt": "临时群聊开放至{{time}}"
     }
   }
 }

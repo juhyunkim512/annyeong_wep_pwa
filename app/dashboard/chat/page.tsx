@@ -10,10 +10,15 @@ import '@/lib/i18n';
 
 interface ChatRoom {
   id: string;
-  other_user_id: string;
-  other_nickname: string;
-  other_flag: string | null;
-  other_image_url: string | null;
+  roomType: 'direct' | 'gather';
+  // direct
+  other_user_id?: string;
+  other_nickname?: string;
+  other_flag?: string | null;
+  other_image_url?: string | null;
+  // gather
+  gather_title?: string;
+  // common
   last_message: string | null;
   last_message_at: string | null;
 }
@@ -39,35 +44,34 @@ export default function ChatListPage() {
       const uid = session.user.id;
       setMyId(uid);
 
-      const { data, error } = await supabase
+      // ── 1:1 채팅방 ──
+      const { data: directData } = await supabase
         .from('chat_room')
         .select('id, user_a, user_b, last_message, last_message_at, user_a_hidden, user_b_hidden')
         .or(`user_a.eq.${uid},user_b.eq.${uid}`)
         .order('last_message_at', { ascending: false, nullsFirst: false });
 
-      if (error || !data) { setLoading(false); return; }
-
-      // 숨긴 방 필터 + 상대 프로필 조회
-      const visible = data.filter((r) =>
+      const visible = (directData || []).filter((r) =>
         (r.user_a === uid && !r.user_a_hidden) ||
         (r.user_b === uid && !r.user_b_hidden)
       );
 
       const others = visible.map((r) => (r.user_a === uid ? r.user_b : r.user_a));
-      if (others.length === 0) { setRooms([]); setLoading(false); return; }
+      const profileMap: Record<string, { nickname: string; flag: string | null; image_url: string | null }> = {};
+      if (others.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profile')
+          .select('id, nickname, flag, image_url')
+          .in('id', others);
+        for (const p of profiles || []) profileMap[p.id] = p;
+      }
 
-      const { data: profiles } = await supabase
-        .from('profile')
-        .select('id, nickname, flag, image_url')
-        .in('id', others);
-
-      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p]));
-
-      setRooms(visible.map((r) => {
+      const directRooms: ChatRoom[] = visible.map((r) => {
         const otherId = r.user_a === uid ? r.user_b : r.user_a;
         const p = profileMap[otherId];
         return {
           id: r.id,
+          roomType: 'direct',
           other_user_id: otherId,
           other_nickname: p?.nickname ?? t('common.unknown'),
           other_flag: p?.flag ?? null,
@@ -75,7 +79,37 @@ export default function ChatListPage() {
           last_message: r.last_message,
           last_message_at: r.last_message_at,
         };
-      }));
+      });
+
+      // ── 모임 단톡방 ──
+      const { data: memberRows } = await supabase
+        .from('gather_chat_member')
+        .select('room_id')
+        .eq('user_id', uid);
+
+      const gatherRoomIds = (memberRows || []).map((m: any) => m.room_id).filter(Boolean);
+      let gatherRooms: ChatRoom[] = [];
+
+      if (gatherRoomIds.length > 0) {
+        const { data: gatherData } = await supabase
+          .from('gather_chat_room')
+          .select('id, title, last_message, last_message_at')
+          .in('id', gatherRoomIds);
+
+        gatherRooms = (gatherData || []).map((r: any) => ({
+          id: r.id,
+          roomType: 'gather' as const,
+          gather_title: r.title ?? t('gather.title'),
+          last_message: r.last_message ?? null,
+          last_message_at: r.last_message_at ?? null,
+        }));
+      }
+
+      // ── 합치고 최신순 정렬 ──
+      const all = [...directRooms, ...gatherRooms].sort((a, b) =>
+        (b.last_message_at ?? '').localeCompare(a.last_message_at ?? '')
+      );
+      setRooms(all);
       setLoading(false);
     };
     fetchRooms();
@@ -95,9 +129,7 @@ export default function ChatListPage() {
             last_message: string | null; last_message_at: string | null;
             user_a_hidden: boolean; user_b_hidden: boolean;
           };
-          // 내가 참여한 방만 처리
           if (updated.user_a !== myId && updated.user_b !== myId) return;
-          // 숨긴 방이면 목록에서 제거
           const isHidden =
             (updated.user_a === myId && updated.user_a_hidden) ||
             (updated.user_b === myId && updated.user_b_hidden);
@@ -114,7 +146,7 @@ export default function ChatListPage() {
                 (b.last_message_at ?? '').localeCompare(a.last_message_at ?? '')
               );
             }
-            return prev; // 새 방은 INSERT 이벤트에서 처리 (아래)
+            return prev;
           });
         }
       )
@@ -135,6 +167,7 @@ export default function ChatListPage() {
             if (prev.some((r) => r.id === newRoom.id)) return prev;
             const room: ChatRoom = {
               id: newRoom.id,
+              roomType: 'direct',
               other_user_id: otherId,
               other_nickname: profile?.nickname ?? t('common.unknown'),
               other_flag: profile?.flag ?? null,
@@ -155,8 +188,22 @@ export default function ChatListPage() {
             const idx = prev.findIndex((r) => r.id === msg.room_id);
             if (idx === -1) return prev;
             const updated = { ...prev[idx], last_message: msg.content, last_message_at: msg.created_at };
-            const next = [updated, ...prev.filter((r) => r.id !== msg.room_id)];
-            return next;
+            return [updated, ...prev.filter((r) => r.id !== msg.room_id)];
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'gather_chat_room' },
+        (payload) => {
+          const updated = payload.new as { id: string; last_message: string | null; last_message_at: string | null };
+          setRooms((prev) => {
+            const idx = prev.findIndex((r) => r.id === updated.id && r.roomType === 'gather');
+            if (idx === -1) return prev;
+            const next = prev.map((r) =>
+              r.id === updated.id ? { ...r, last_message: updated.last_message, last_message_at: updated.last_message_at } : r
+            );
+            return next.sort((a, b) => (b.last_message_at ?? '').localeCompare(a.last_message_at ?? ''));
           });
         }
       )
@@ -203,19 +250,40 @@ export default function ChatListPage() {
           {rooms.map((room) => (
             <button
               key={room.id}
-              onClick={() => router.push(`/dashboard/chat/${room.id}`)}
+              onClick={() =>
+                room.roomType === 'gather'
+                  ? router.push(`/dashboard/gather/chat/${room.id}`)
+                  : router.push(`/dashboard/chat/${room.id}`)
+              }
               className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-gray-100 transition text-left"
             >
-              <AvatarImage src={room.other_image_url} size={48} />
+              {room.roomType === 'gather' ? (
+                <div className="w-12 h-12 rounded-full bg-[#e8f0e9] flex items-center justify-center text-2xl flex-shrink-0">
+                  👥
+                </div>
+              ) : (
+                <AvatarImage src={room.other_image_url ?? null} size={48} />
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1">
-                  <span className="font-semibold text-gray-800 truncate">{room.other_nickname}</span>
-                  {room.other_flag && (
-                    <span className="text-base">{FLAG_EMOJI_MAP[room.other_flag] ?? ''}</span>
+                  {room.roomType === 'gather' ? (
+                    <span className="font-semibold text-gray-800 truncate">{room.gather_title}</span>
+                  ) : (
+                    <>
+                      <span className="font-semibold text-gray-800 truncate">{room.other_nickname}</span>
+                      {room.other_flag && (
+                        <span className="text-base">{FLAG_EMOJI_MAP[room.other_flag] ?? ''}</span>
+                      )}
+                    </>
+                  )}
+                  {room.roomType === 'gather' && (
+                    <span className="ml-1 text-xs bg-[#e8f0e9] text-[#6b8f6e] px-1.5 py-0.5 rounded-full flex-shrink-0">
+                      {t('gather.title')}
+                    </span>
                   )}
                 </div>
                 <p className="text-sm text-gray-500 truncate mt-0.5">
-                  {room.last_message ?? t('chat.noMessages')}
+                  {room.last_message ?? (room.roomType === 'gather' ? t('chat.gatherCreated') : t('chat.noMessages'))}
                 </p>
               </div>
               {room.last_message_at && (

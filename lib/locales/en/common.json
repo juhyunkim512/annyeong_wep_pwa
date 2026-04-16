@@ -5,7 +5,8 @@
     "services": "Services",
     "help": "Help",
     "myPage": "My Page",
-    "chat": "Chat"
+    "chat": "Chat",
+    "gather": "Gather"
   },
   "chat": {
     "title": "Chat",
@@ -23,6 +24,7 @@
     "blocked": "You have blocked this user.",
     "noMessages": "No messages yet. Say hello!",
     "sendFailed": "Failed to send message.",
+    "gatherCreated": "Group chat has been created.",
     "you": "You"
   },
   "common": {
@@ -536,6 +538,89 @@
     "cta": {
       "home": "Go to Home",
       "signUp": "Sign Up"
+    }
+  },
+  "gather": {
+    "title": "Gather",
+    "writeGather": "Create Gathering",
+    "noGatherings": "No gatherings yet.",
+    "mapView": "Map View",
+    "listView": "List View",
+    "timeLeft": "{{minutes}}m left",
+    "timeLeftHour": "{{hours}}h {{minutes}}m left",
+    "expired": "Expired",
+    "participants": "{{current}}/{{max}}",
+    "detail": {
+      "title": "Gathering Detail",
+      "location": "Location",
+      "meetTime": "Meet Time",
+      "timeRemaining": "Time Remaining",
+      "participants": "Participants",
+      "join": "Join",
+      "joined": "Joined",
+      "leave": "Leave",
+      "full": "Full",
+      "loginRequired": "Login required to join.",
+      "deleteConfirm": "Delete this gathering?",
+      "delete": "Delete Gathering",
+      "myGathering": "My Gathering",
+      "confirm": "Confirm Gathering",
+      "confirming": "Confirming...",
+      "confirmed": "Gathering confirmed! Group chat has been created.",
+      "confirmedBadge": "Confirmed 🎉",
+      "confirmDesc": "Confirming will create a temporary group chat for all participants.",
+      "chatCreated": "Go to Group Chat"
+    },
+    "write": {
+      "title": "Create Gathering",
+      "category": "Topic",
+      "categoryPlaceholder": "Select a topic",
+      "postTitle": "Title",
+      "postTitlePlaceholder": "e.g. Anyone for beer in Hongdae?",
+      "content": "Description",
+      "contentPlaceholder": "Short description of your gathering",
+      "location": "Location",
+      "quickLocation": "Quick Select",
+      "mapLocation": "Select on Map",
+      "meetTime": "Time",
+      "meetTimeNow": "Now",
+      "meetTime30": "In 30 min",
+      "meetTime60": "In 1 hour",
+      "meetTimeCustom": "Custom",
+      "maxParticipants": "Max Participants",
+      "maxParticipantsUnit": "",
+      "submit": "Create",
+      "saving": "Creating...",
+      "fillRequired": "Please fill in all required fields.",
+      "failed": "Failed to create gathering.",
+      "selectLocation": "Select a location",
+      "tapToSelectLocation": "Tap the map to select a location"
+    },
+    "categories": {
+      "language": "Language Exchange 🗣️",
+      "drink": "Drinks 🍺",
+      "sports": "Sports 💪",
+      "food": "Food/Cafe ☕",
+      "talk": "Talk 💬",
+      "game": "Games 🎮",
+      "pet": "Pets 🐾",
+      "travel": "Travel ✈️",
+      "sing": "Singing 🎤",
+      "movie": "Movies 🎬",
+      "etc": "Other 📌"
+    },
+    "locations": {
+      "hongdae": "Hongdae",
+      "hapjeong": "Hapjeong",
+      "itaewon": "Itaewon",
+      "gangnam": "Gangnam",
+      "kondae": "Kondae",
+      "seongsu": "Seongsu"
+    },
+    "groupChat": {
+      "title": "Gather Chat",
+      "expired": "This chat has expired as the meeting time has passed.",
+      "expiresAt": "Temporary chat open until {{time}}"
     }
   }
 }

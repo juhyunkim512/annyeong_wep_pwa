@@ -15,6 +15,7 @@
     "blocked": "Has bloqueado a este usuario.",
     "noMessages": "Aún no hay mensajes. ¡Di hola!",
     "sendFailed": "Error al enviar el mensaje.",
+    "gatherCreated": "Se ha creado el chat grupal.",
     "you": "Tú"
   },
   "nav": {
@@ -22,7 +23,9 @@
     "community": "Comunidad",
     "services": "Servicios",
     "help": "Ayuda",
-    "myPage": "Mi Página"
+    "myPage": "Mi Página",
+    "chat": "Chat",
+    "gather": "Reunión"
   },
   "common": {
     "loading": "Cargando...",
@@ -535,6 +538,89 @@
     "cta": {
       "home": "Ir al Inicio",
       "signUp": "Registrarse"
+    }
+  },
+  "gather": {
+    "title": "Reunión",
+    "writeGather": "Crear reunión",
+    "noGatherings": "Aún no hay reuniones.",
+    "mapView": "Ver mapa",
+    "listView": "Ver lista",
+    "timeLeft": "{{minutes}}min restantes",
+    "timeLeftHour": "{{hours}}h {{minutes}}min restantes",
+    "expired": "Expirado",
+    "participants": "{{current}}/{{max}}",
+    "detail": {
+      "title": "Detalle de reunión",
+      "location": "Ubicación",
+      "meetTime": "Hora de encuentro",
+      "timeRemaining": "Tiempo restante",
+      "participants": "Participantes",
+      "join": "Unirse",
+      "joined": "Unido",
+      "leave": "Salir",
+      "full": "Lleno",
+      "loginRequired": "Inicia sesión para unirte.",
+      "deleteConfirm": "¿Eliminar esta reunión?",
+      "delete": "Eliminar reunión",
+      "myGathering": "Mi reunión",
+      "confirm": "Confirmar reunión",
+      "confirming": "Confirmando...",
+      "confirmed": "¡Reunión confirmada! Se ha creado el chat grupal.",
+      "confirmedBadge": "Confirmado 🎉",
+      "confirmDesc": "Al confirmar se creará un chat grupal temporal para todos los participantes.",
+      "chatCreated": "Ir al chat grupal"
+    },
+    "write": {
+      "title": "Crear reunión",
+      "category": "Tema",
+      "categoryPlaceholder": "Selecciona un tema",
+      "postTitle": "Título",
+      "postTitlePlaceholder": "Ej: ¿Cerveza en Hongdae?",
+      "content": "Descripción",
+      "contentPlaceholder": "Breve descripción",
+      "location": "Ubicación",
+      "quickLocation": "Selección rápida",
+      "mapLocation": "Seleccionar en mapa",
+      "meetTime": "Hora",
+      "meetTimeNow": "Ahora",
+      "meetTime30": "En 30 min",
+      "meetTime60": "En 1 hora",
+      "meetTimeCustom": "Personalizar",
+      "maxParticipants": "Máx. participantes",
+      "maxParticipantsUnit": "",
+      "submit": "Crear",
+      "saving": "Creando...",
+      "fillRequired": "Complete todos los campos requeridos.",
+      "failed": "Error al crear la reunión.",
+      "selectLocation": "Seleccione una ubicación",
+      "tapToSelectLocation": "Toque el mapa para seleccionar"
+    },
+    "categories": {
+      "language": "Intercambio de idiomas 🗣️",
+      "drink": "Bebidas 🍺",
+      "sports": "Deporte 💪",
+      "food": "Comida/Café ☕",
+      "talk": "Charla 💬",
+      "game": "Juegos 🎮",
+      "pet": "Mascotas 🐾",
+      "travel": "Viaje ✈️",
+      "sing": "Karaoke 🎤",
+      "movie": "Cine 🎬",
+      "etc": "Otro 📌"
+    },
+    "locations": {
+      "hongdae": "Hongdae",
+      "hapjeong": "Hapjeong",
+      "itaewon": "Itaewon",
+      "gangnam": "Gangnam",
+      "kondae": "Kondae",
+      "seongsu": "Seongsu"
+    },
+    "groupChat": {
+      "title": "Chat de reunión",
+      "expired": "Este chat ha expirado porque pasó la hora del encuentro.",
+      "expiresAt": "Chat temporal abierto hasta {{time}}"
     }
   }
 }

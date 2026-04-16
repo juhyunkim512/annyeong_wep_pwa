@@ -14,15 +14,16 @@
     "blockConfirm": "Chặn người dùng này? Mối quan hệ theo dõi sẽ bị xóa.",
     "blocked": "Bạn đã chặn người dùng này.",
     "noMessages": "Chưa có tin nhắn. Hãy chào nhau nào!",
-    "sendFailed": "Gửi tin nhắn thất bại.",
-    "you": "Bạn"
+    "sendFailed": "Gửi tin nhắn thất bại.",    "gatherCreated": "Nhóm chat đã được tạo.",    "you": "Bạn"
   },
   "nav": {
     "main": "Trang chính",
     "community": "Cộng đồng",
     "services": "Dịch vụ",
     "help": "Trợ giúp",
-    "myPage": "Trang của tôi"
+    "myPage": "Trang của tôi",
+    "chat": "Trò chuyện",
+    "gather": "Tập hợp"
   },
   "common": {
     "loading": "Đang tải...",
@@ -533,6 +534,89 @@
     "cta": {
       "home": "Về trang chủ",
       "signUp": "Đăng ký"
+    }
+  },
+  "gather": {
+    "title": "Tập hợp",
+    "writeGather": "Tạo buổi gặp",
+    "noGatherings": "Chưa có buổi gặp nào.",
+    "mapView": "Xem bản đồ",
+    "listView": "Xem danh sách",
+    "timeLeft": "Còn {{minutes}} phút",
+    "timeLeftHour": "Còn {{hours}} giờ {{minutes}} phút",
+    "expired": "Đã hết hạn",
+    "participants": "{{current}}/{{max}} người",
+    "detail": {
+      "title": "Chi tiết buổi gặp",
+      "location": "Địa điểm",
+      "meetTime": "Thời gian gặp",
+      "timeRemaining": "Thời gian còn lại",
+      "participants": "Người tham gia",
+      "join": "Tham gia",
+      "joined": "Đã tham gia",
+      "leave": "Hủy tham gia",
+      "full": "Đã đầy",
+      "loginRequired": "Cần đăng nhập để tham gia.",
+      "deleteConfirm": "Xóa buổi gặp này?",
+      "delete": "Xóa buổi gặp",
+      "myGathering": "Buổi gặp của tôi",
+      "confirm": "Xác nhận buổi gặp",
+      "confirming": "Đang xác nhận...",
+      "confirmed": "Buổi gặp đã xác nhận! Nhóm chat đã được tạo.",
+      "confirmedBadge": "Đã xác nhận 🎉",
+      "confirmDesc": "Xác nhận sẽ tạo nhóm chat tạm thời cho tất cả người tham gia.",
+      "chatCreated": "Đến nhóm chat"
+    },
+    "write": {
+      "title": "Tạo buổi gặp",
+      "category": "Chủ đề",
+      "categoryPlaceholder": "Chọn chủ đề",
+      "postTitle": "Tiêu đề",
+      "postTitlePlaceholder": "VD: Ai uống bia ở Hongdae không?",
+      "content": "Nội dung",
+      "contentPlaceholder": "Mô tả ngắn",
+      "location": "Địa điểm",
+      "quickLocation": "Chọn nhanh",
+      "mapLocation": "Chọn trên bản đồ",
+      "meetTime": "Thời gian",
+      "meetTimeNow": "Bây giờ",
+      "meetTime30": "Sau 30 phút",
+      "meetTime60": "Sau 1 giờ",
+      "meetTimeCustom": "Tùy chọn",
+      "maxParticipants": "Số người tối đa",
+      "maxParticipantsUnit": " người",
+      "submit": "Tạo",
+      "saving": "Đang tạo...",
+      "fillRequired": "Vui lòng điền đầy đủ.",
+      "failed": "Tạo buổi gặp thất bại.",
+      "selectLocation": "Vui lòng chọn địa điểm",
+      "tapToSelectLocation": "Chạm vào bản đồ để chọn"
+    },
+    "categories": {
+      "language": "Trao đổi ngôn ngữ 🗣️",
+      "drink": "Nhậu 🍺",
+      "sports": "Thể thao 💪",
+      "food": "Ăn uống/Cà phê ☕",
+      "talk": "Trò chuyện 💬",
+      "game": "Game 🎮",
+      "pet": "Thú cưng 🐾",
+      "travel": "Du lịch ✈️",
+      "sing": "Ca hát 🎤",
+      "movie": "Phim 🎬",
+      "etc": "Khác 📌"
+    },
+    "locations": {
+      "hongdae": "Hongdae",
+      "hapjeong": "Hapjeong",
+      "itaewon": "Itaewon",
+      "gangnam": "Gangnam",
+      "kondae": "Kondae",
+      "seongsu": "Seongsu"
+    },
+    "groupChat": {
+      "title": "Chat nhóm",
+      "expired": "Nhóm chat đã hết hạn vì đã qua giờ gặp.",
+      "expiresAt": "Nhóm chat tạm mở đến {{time}}"
     }
   }
 }
