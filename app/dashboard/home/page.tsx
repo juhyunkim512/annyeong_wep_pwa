@@ -20,12 +20,30 @@ const GUIDE_LANGS: { code: AppLang; flag: string; label: string }[] = [
   { code: 'es', flag: '🇪🇸', label: 'Español' },
 ]
 
+const CATEGORY_EMOJI: Record<string, string> = {
+  language: '🗣️', drink: '🍺', sports: '💪', food: '☕', talk: '💬',
+  game: '🎮', pet: '🐾', travel: '✈️', sing: '🎤', movie: '🎬', etc: '📌',
+}
+
 interface PostSummary {
   id: string
   title: string
   language: string
   created_at: string
   like_count: number
+  nickname: string | null
+}
+
+interface GatherSummary {
+  id: string
+  title: string
+  category: string
+  language: string
+  location_label: string
+  meet_at: string
+  participant_count: number
+  max_participants: number
+  expires_at: string
   nickname: string | null
 }
 
@@ -45,27 +63,28 @@ export default function HomePage() {
     if (diff < 86400 * 365) return t('common.monthsAgo', { count: Math.floor(diff / (86400 * 30)) })
     return t('common.yearsAgo', { count: Math.floor(diff / (86400 * 365)) })
   }
-  const [recentPosts, setRecentPosts] = useState<PostSummary[]>([])
+
   const [trendingPosts, setTrendingPosts] = useState<PostSummary[]>([])
   const [translatedTitles, setTranslatedTitles] = useState<Record<string, string>>({})
   const [postsLoading, setPostsLoading] = useState(true)
-  // request id ref: 최신 요청만 상태 반영, stale 응답은 loading 건드리지 않음
+
+  const [gatherItems, setGatherItems] = useState<GatherSummary[]>([])
+  const [gatherLoading, setGatherLoading] = useState(true)
+
+  // request id ref: 최신 요청만 상태 반영
   const reqRef = useRef(0)
 
   useEffect(() => {
     const reqId = ++reqRef.current
     const controller = new AbortController()
-    const fetchPosts = async () => {
+    const fetchData = async () => {
       setPostsLoading(true)
+      setGatherLoading(true)
       try {
-        // Recent + Trending 병렬 fetch
         const threeDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-        const [{ data: recent }, { data: trending }] = await Promise.all([
-          supabase
-            .from('post')
-            .select('id, title, language, created_at, like_count, public_profile(nickname)')
-            .order('created_at', { ascending: false })
-            .limit(3),
+
+        // Trending posts + Gather 병렬 fetch
+        const [{ data: trending }, gatherRes] = await Promise.all([
           supabase
             .from('post')
             .select('id, title, language, created_at, like_count, public_profile(nickname)')
@@ -74,6 +93,7 @@ export default function HomePage() {
             .order('like_count', { ascending: false })
             .order('created_at', { ascending: false })
             .limit(3),
+          fetch('/api/gather', { signal: controller.signal }),
         ])
 
         if (reqRef.current !== reqId) return
@@ -88,13 +108,35 @@ export default function HomePage() {
             nickname: Array.isArray(r.public_profile) ? r.public_profile[0]?.nickname : r.public_profile?.nickname ?? null,
           }))
 
-        const normalizedRecent = normalize(recent ?? [])
         const normalizedTrending = normalize(trending ?? [])
-        setRecentPosts(normalizedRecent)
         setTrendingPosts(normalizedTrending)
         setPostsLoading(false)
 
-        // ── 번역: 완전히 분리된 비동기 컨텍스트 (I18nProvider auth 충돌 방지) ──
+        if (gatherRes.ok) {
+          const gatherData = await gatherRes.json()
+          const now = Date.now()
+          const items: GatherSummary[] = ((gatherData.posts || []) as any[])
+            .filter((p: any) => new Date(p.expires_at).getTime() > now)
+            .slice(0, 3)
+            .map((p: any) => ({
+              id: p.id,
+              title: p.title,
+              category: p.category,
+              language: p.language ?? 'english',
+              location_label: p.location_label ?? '',
+              meet_at: p.meet_at,
+              participant_count: p.participant_count ?? 0,
+              max_participants: p.max_participants ?? 0,
+              expires_at: p.expires_at,
+              nickname: p.nickname ?? null,
+            }))
+          if (reqRef.current === reqId) {
+            setGatherItems(items)
+          }
+        }
+        setGatherLoading(false)
+
+        // ── 번역: 트렌딩 포스트 제목 번역 ──
         void (async () => {
           try {
             const { data: { session } } = await supabase.auth.getSession()
@@ -106,9 +148,7 @@ export default function HomePage() {
               .maybeSingle()
             const userLang = normalizeLang(userProfile?.uselanguage)
             const accessToken = session.access_token
-            const allPosts = [...normalizedRecent, ...normalizedTrending]
-            const unique = allPosts.filter((p, i) => allPosts.findIndex((q) => q.id === p.id) === i)
-            const toTranslate = unique.filter((p) => normalizeLang(p.language) !== userLang)
+            const toTranslate = normalizedTrending.filter((p) => normalizeLang(p.language) !== userLang)
             if (toTranslate.length > 0) {
               const batchItems = toTranslate.map((p) => ({
                 key: p.id,
@@ -135,17 +175,20 @@ export default function HomePage() {
           }
         })()
       } catch (err) {
-        console.error('[Home] fetchPosts error:', err)
+        if ((err as Error)?.name !== 'AbortError') {
+          console.error('[Home] fetchData error:', err)
+        }
       } finally {
-        setPostsLoading(false)
+        if (reqRef.current === reqId) {
+          setPostsLoading(false)
+          setGatherLoading(false)
+        }
       }
     }
-    fetchPosts()
+    fetchData()
     return () => controller.abort()
   }, [])
 
-  // [수정] 텍스트 기반 배너 제거 → 이미지 기반 3개로 교체
-  // banner3 클릭 시 /dashboard/community로 이동
   const banners = [
     { image: '/banner1.png', isGuide: true, href: null, communityLink: false },
     { image: '/banner2.png', isGuide: false, href: 'https://gauge-rope-63895960.figma.site', communityLink: false },
@@ -176,7 +219,6 @@ export default function HomePage() {
     setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)
   }
 
-  // 3초마다 자동 슬라이드
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentBanner((prev) => (prev + 1) % banners.length)
@@ -186,7 +228,7 @@ export default function HomePage() {
 
   return (
     <div className="max-w-6xl space-y-8">
-      {/* Banner Carousel — [수정] 이미지 전용, 텍스트 배너 제거 */}
+      {/* Banner Carousel */}
       <section className="relative">
         <div
           className="relative rounded-2xl overflow-hidden cursor-pointer active:opacity-90"
@@ -226,32 +268,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Recent Posts */}
-      <section className="bg-white rounded-2xl border border-gray-200 p-6">
-        <h2 className="text-2xl font-bold mb-4">{t('home.recentPosts')}</h2>
-        {postsLoading ? (
-          <div className="text-gray-400 text-sm py-4 text-center">{t('common.loading')}</div>
-        ) : recentPosts.length === 0 ? (
-          <div className="text-gray-400 text-sm py-4 text-center">{t('home.noRecentPosts')}</div>
-        ) : (
-          <div className="space-y-3">
-            {recentPosts.map((post) => (
-              <Link href={`/dashboard/community/${post.id}`} key={post.id}>
-                <div className="p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition">
-                  <p className="font-semibold text-gray-900">{translatedTitles[post.id] ?? post.title}</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {t('common.by')} {post.nickname ?? t('common.unknown')} • {timeAgo(post.created_at)}
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
       {/* Trending Posts */}
       <section className="bg-white rounded-2xl border border-gray-200 p-6">
-        <h2 className="text-2xl font-bold mb-4">{t('home.trendingPosts')}</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold">{t('home.trendingPosts')}</h2>
+          <Link href="/dashboard/community" className="text-sm text-[#9DB8A0] font-medium hover:underline">
+            {t('home.viewAll')}
+          </Link>
+        </div>
         {postsLoading ? (
           <div className="text-gray-400 text-sm py-4 text-center">{t('common.loading')}</div>
         ) : trendingPosts.length === 0 ? (
@@ -268,6 +292,50 @@ export default function HomePage() {
                 </div>
               </Link>
             ))}
+          </div>
+        )}
+      </section>
+
+      {/* 모여라 */}
+      <section className="bg-white rounded-2xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold">{t('gather.title')}</h2>
+          <Link href="/dashboard/gather" className="text-sm text-[#9DB8A0] font-medium hover:underline">
+            {t('home.viewAll')}
+          </Link>
+        </div>
+        {gatherLoading ? (
+          <div className="text-gray-400 text-sm py-4 text-center">{t('common.loading')}</div>
+        ) : gatherItems.length === 0 ? (
+          <div className="text-gray-400 text-sm py-4 text-center">{t('gather.noGatherings')}</div>
+        ) : (
+          <div className="space-y-3">
+            {gatherItems.map((item) => {
+              const diff = new Date(item.expires_at).getTime() - Date.now()
+              const totalMin = Math.floor(diff / 60000)
+              const hours = Math.floor(totalMin / 60)
+              const minutes = totalMin % 60
+              const timeLeft = hours > 0
+                ? t('gather.timeLeftHour', { hours, minutes })
+                : t('gather.timeLeft', { minutes })
+              return (
+                <Link href="/dashboard/gather" key={item.id}>
+                  <div className="p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 truncate">
+                          {CATEGORY_EMOJI[item.category] ?? '📌'} {item.title}
+                        </p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          📍 {item.location_label} • {t('gather.participants', { current: item.participant_count, max: item.max_participants })}
+                        </p>
+                      </div>
+                      <span className="text-xs text-[#9DB8A0] font-medium whitespace-nowrap shrink-0">{timeLeft}</span>
+                    </div>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         )}
       </section>
@@ -311,3 +379,4 @@ export default function HomePage() {
     </div>
   )
 }
+

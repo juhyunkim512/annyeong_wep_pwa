@@ -21,7 +21,7 @@
   "nav": {
     "main": "Principal",
     "community": "Comunidad",
-    "services": "Servicios",
+    "services": "Servicios para extranjeros",
     "help": "Ayuda",
     "myPage": "Mi Página",
     "chat": "Chat",
@@ -128,6 +128,7 @@
     "trendingPosts": "🔥 Publicaciones populares",
     "noRecentPosts": "Aún no hay publicaciones recientes.",
     "noTrendingPosts": "No hay publicaciones populares ahora.",
+    "viewAll": "Ver todo →",
     "banners": {
       "policy": {
         "title": "Políticas de apoyo para extranjeros",
@@ -154,10 +155,12 @@
     "myPosts": "Mis Publicaciones",
     "likedPosts": "Me gustas",
     "friends": "Amigos",
+    "help": "Ayuda",
     "settings": "Configuración",
     "myPostsDesc": "Publicaciones que has publicado",
     "likedPostsDesc": "Publicaciones que te gustaron",
     "friendsDesc": "Amigos y usuarios bloqueados",
+    "helpDesc": "Preguntas frecuentes y soporte",
     "settingsDesc": "Perfil, contraseña, idioma",
     "signInPrompt": "Inicia sesión para ver tu perfil",
     "noPosts": "Aún no hay publicaciones.",
@@ -271,14 +274,8 @@
     "faqs": {
       "q1": "¿ANNYEONG es realmente gratis?",
       "a1": "El acceso a la comunidad e información básica es completamente gratuito. Algunos servicios premium pueden tener costos, pero la consulta inicial siempre es gratuita.",
-      "q2": "¿Cuánto tiempo tarda en recibir ayuda?",
-      "a2": "Respondemos la mayoría de consultas en 1-2 horas. Para casos urgentes, priorizamos respuestas más rápidas.",
-      "q3": "¿Qué documentos necesito para una visa?",
-      "a3": "Depende de tu tipo de visa. Ofrecemos orientación personalizada, únete a la comunidad o contáctanos.",
-      "q4": "¿Puedo usar ANNYEONG antes de llegar a Corea?",
-      "a4": "¡Por supuesto! Nuestra plataforma ayuda a prepararse antes de llegar.",
-      "q5": "¿Qué idiomas se admiten?",
-      "a5": "Admitimos coreano, inglés, chino, japonés, vietnamita. ¡Más idiomas próximamente!"
+      "q2": "¿Qué idiomas se admiten?",
+      "a2": "Admitimos coreano, inglés, chino, japonés, vietnamita y español."
     },
     "shareIdea": {
       "title": "💡 Comparte tu idea",
@@ -372,7 +369,11 @@
     "statusOptions": {
       "living": "Actualmente viviendo en Corea",
       "planning": "Planeando mudarse a Corea"
-    }
+    },
+    "gender": "Género",
+    "genderMale": "Hombre",
+    "genderFemale": "Mujer",
+    "genderNote": "* Tu género no se muestra públicamente y solo se usa para análisis de datos."
   },
   "findId": {
     "title": "Encontrar ID",

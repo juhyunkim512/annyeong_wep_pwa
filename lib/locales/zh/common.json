@@ -21,7 +21,7 @@
   "nav": {
     "main": "主页",
     "community": "社区",
-    "services": "服务",
+    "services": "外国人服务",
     "help": "帮助",
     "myPage": "我的主页",
     "chat": "聊天",
@@ -128,6 +128,7 @@
     "trendingPosts": "🔥 热门帖子",
     "noRecentPosts": "暂无最新帖子。",
     "noTrendingPosts": "目前没有热门帖子。",
+    "viewAll": "查看全部 →",
     "banners": {
       "policy": {
         "title": "外国人支持政策",
@@ -154,10 +155,12 @@
     "myPosts": "我的帖子",
     "likedPosts": "点赞帖子",
     "friends": "好友",
+    "help": "帮助",
     "settings": "设置",
     "myPostsDesc": "您发布的帖子",
     "likedPostsDesc": "您点赞的帖子",
     "friendsDesc": "好友与屏蔽用户",
+    "helpDesc": "常见问题 & 支持",
     "settingsDesc": "资料、密码、语言",
     "signInPrompt": "登录查看您的资料",
     "noPosts": "暂无帖子。",
@@ -271,14 +274,8 @@
     "faqs": {
       "q1": "ANNYEONG真的是免费的吗？",
       "a1": "社区访问和基本信息完全免费。部分高级服务可能收费，但初次咨询始终免费。",
-      "q2": "获得帮助需要多长时间？",
-      "a2": "大多数问题我们会在1-2小时内回复。紧急情况会优先处理。",
-      "q3": "申请签证需要哪些文件？",
-      "a3": "取决于您的签证类型。加入社区或联系我们，我们会提供个性化指导。",
-      "q4": "来韩国之前可以使用ANNYEONG吗？",
-      "a4": "当然！我们的平台帮助人们提前做好准备。",
-      "q5": "支持哪些语言？",
-      "a5": "支持韩语、英语、中文、日语、越南语。更多语言即将上线！"
+      "q2": "支持哪些语言？",
+      "a2": "支持韩语、英语、中文、日语、越南语和西班牙语。"
     },
     "shareIdea": {
       "title": "💡 分享您的想法",
@@ -372,7 +369,11 @@
     "statusOptions": {
       "living": "目前居住在韩国",
       "planning": "计划移居韩国"
-    }
+    },
+    "gender": "性别",
+    "genderMale": "男",
+    "genderFemale": "女",
+    "genderNote": "* 您的性别不会公开显示，仅用于数据分析目的。"
   },
   "findId": {
     "title": "找回账号",
@@ -471,7 +472,8 @@
       "title": "就业机会",
       "desc": "浏览兼职和全职职位列表"
     }
-  },  "consult": {
+  },
+  "consult": {
     "applyBtn": "申请和询",
     "modalTitle": "和询申请",
     "name": "姓名",
@@ -500,7 +502,8 @@
     "privacyNote": "您的信息仅用于和询目的。",
     "successTitle": "申请已收到！",
     "successDesc": "我们将在 1 个工作日内回复您。"
-  },  "guide": {
+  },
+  "guide": {
     "hero": {
       "title": "在韩生活，ANNYEONG不可或缺",
       "subtitle": "正如人需要水和空气，ANNYEONG对韩国生活来说不是选择，而是必需品"

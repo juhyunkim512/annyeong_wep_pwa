@@ -130,6 +130,8 @@ export default function ChatRoomPage() {
 
   useEffect(() => {
     const init = async () => {
+      // 세션이 만료됐을 수 있으므로 항상 갱신
+      await supabase.auth.refreshSession();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push('/dashboard/home'); return; }
       const uid = session.user.id;
@@ -180,6 +182,14 @@ export default function ChatRoomPage() {
       setLoading(false);
 
       translateMessages(loaded, shortLang, session.access_token);
+
+      // 읽음 상태 직접 후 layout에 즉시 반영
+      supabase.from('chat_room_read_state').upsert(
+        { room_id: roomId, room_type: 'direct', user_id: uid, last_read_at: new Date().toISOString() },
+        { onConflict: 'room_id,room_type,user_id' }
+      ).then(() => {
+        window.dispatchEvent(new CustomEvent('unreadUpdate'));
+      });
     };
     init();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -351,7 +361,7 @@ export default function ChatRoomPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-96px)] md:h-[calc(100vh-32px)] max-w-lg mx-auto">
+    <div className="flex flex-col h-screen md:h-[calc(100vh-32px)] w-full md:max-w-lg md:mx-auto">
 
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white flex-shrink-0">
@@ -479,7 +489,7 @@ export default function ChatRoomPage() {
       </div>
 
       {/* 입력창 */}
-      <div className="border-t border-gray-200 bg-white px-4 py-3 flex-shrink-0">
+      <div className="border-t border-gray-200 bg-white px-4 pt-3 pb-10 flex-shrink-0">
         {isMutualFollow && !isBlocked ? (
           <div className="flex items-center gap-2">
             <input
@@ -489,7 +499,7 @@ export default function ChatRoomPage() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               placeholder={t('chat.inputPlaceholder')}
-              className="flex-1 border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-[#9DB8A0]"
+              className="flex-1 border border-gray-200 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:border-[#9DB8A0]"
               maxLength={1000}
             />
             <button

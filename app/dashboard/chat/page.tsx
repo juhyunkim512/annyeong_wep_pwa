@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import AvatarImage from '@/components/common/AvatarImage';
@@ -21,6 +21,7 @@ interface ChatRoom {
   // common
   last_message: string | null;
   last_message_at: string | null;
+  unread_count: number;
 }
 
 const FLAG_EMOJI_MAP: Record<string, string> = {
@@ -36,6 +37,23 @@ export default function ChatListPage() {
   const [loading, setLoading] = useState(true);
   const [myId, setMyId] = useState<string | null>(null);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [revealedId, setRevealedId] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string>('');
+  const touchStartX = useRef<number>(0);
+
+  const hideRoom = async (roomId: string, roomType: 'direct' | 'gather') => {
+    setRooms((prev) => prev.filter((r) => r.id !== roomId));
+    setRevealedId(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    await fetch('/api/chat/hide', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token ?? ''}`,
+      },
+      body: JSON.stringify({ roomId, roomType }),
+    });
+  };
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -43,6 +61,7 @@ export default function ChatListPage() {
       if (!session) { setLoading(false); return; }
       const uid = session.user.id;
       setMyId(uid);
+      setAccessToken(session.access_token);
 
       // ── 1:1 채팅방 ──
       const { data: directData } = await supabase
@@ -66,6 +85,36 @@ export default function ChatListPage() {
         for (const p of profiles || []) profileMap[p.id] = p;
       }
 
+      // ── unread count 계산 ──
+      const allRoomIds = visible.map((r) => r.id);
+      const readStateMap: Record<string, string | null> = {};
+      if (allRoomIds.length > 0) {
+        const { data: readStates } = await supabase
+          .from('chat_room_read_state')
+          .select('room_id, last_read_at')
+          .eq('user_id', uid)
+          .eq('room_type', 'direct')
+          .in('room_id', allRoomIds);
+        for (const rs of readStates || []) readStateMap[rs.room_id] = rs.last_read_at;
+      }
+
+      const unreadCountMap: Record<string, number> = {};
+      await Promise.all(
+        visible.map(async (r) => {
+          const otherId = r.user_a === uid ? r.user_b : r.user_a;
+          const lastRead = readStateMap[r.id] ?? null;
+          let query = supabase
+            .from('chat_message')
+            .select('id', { count: 'exact', head: true })
+            .eq('room_id', r.id)
+            .neq('sender_id', uid);
+          if (lastRead) query = query.gt('created_at', lastRead);
+          const { count } = await query;
+          unreadCountMap[r.id] = count ?? 0;
+          return otherId;
+        })
+      );
+
       const directRooms: ChatRoom[] = visible.map((r) => {
         const otherId = r.user_a === uid ? r.user_b : r.user_a;
         const p = profileMap[otherId];
@@ -78,6 +127,7 @@ export default function ChatListPage() {
           other_image_url: p?.image_url ?? null,
           last_message: r.last_message,
           last_message_at: r.last_message_at,
+          unread_count: unreadCountMap[r.id] ?? 0,
         };
       });
 
@@ -85,7 +135,8 @@ export default function ChatListPage() {
       const { data: memberRows } = await supabase
         .from('gather_chat_member')
         .select('room_id')
-        .eq('user_id', uid);
+        .eq('user_id', uid)
+        .eq('hidden', false);
 
       const gatherRoomIds = (memberRows || []).map((m: any) => m.room_id).filter(Boolean);
       let gatherRooms: ChatRoom[] = [];
@@ -96,12 +147,38 @@ export default function ChatListPage() {
           .select('id, title, last_message, last_message_at')
           .in('id', gatherRoomIds);
 
+        // gather unread 계산
+        const { data: gatherReadStates } = await supabase
+          .from('chat_room_read_state')
+          .select('room_id, last_read_at')
+          .eq('user_id', uid)
+          .eq('room_type', 'gather')
+          .in('room_id', gatherRoomIds);
+        const gatherReadMap: Record<string, string | null> = {};
+        for (const rs of gatherReadStates || []) gatherReadMap[rs.room_id] = rs.last_read_at;
+
+        const gatherUnreadMap: Record<string, number> = {};
+        await Promise.all(
+          (gatherData || []).map(async (r: any) => {
+            const lastRead = gatherReadMap[r.id] ?? null;
+            let query = supabase
+              .from('gather_chat_message')
+              .select('id', { count: 'exact', head: true })
+              .eq('room_id', r.id)
+              .neq('sender_id', uid);
+            if (lastRead) query = query.gt('created_at', lastRead);
+            const { count } = await query;
+            gatherUnreadMap[r.id] = count ?? 0;
+          })
+        );
+
         gatherRooms = (gatherData || []).map((r: any) => ({
           id: r.id,
           roomType: 'gather' as const,
           gather_title: r.title ?? t('gather.title'),
           last_message: r.last_message ?? null,
           last_message_at: r.last_message_at ?? null,
+          unread_count: gatherUnreadMap[r.id] ?? 0,
         }));
       }
 
@@ -174,6 +251,7 @@ export default function ChatListPage() {
               other_image_url: profile?.image_url ?? null,
               last_message: newRoom.last_message,
               last_message_at: newRoom.last_message_at,
+              unread_count: 0,
             };
             return [room, ...prev];
           });
@@ -183,13 +261,21 @@ export default function ChatListPage() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_message' },
         (payload) => {
-          const msg = payload.new as { room_id: string; content: string; created_at: string };
+          const msg = payload.new as { room_id: string; sender_id: string; content: string; created_at: string };
+          if (msg.sender_id === myId) return; // 내가 보낸 메시지는 unread 아님
           setRooms((prev) => {
             const idx = prev.findIndex((r) => r.id === msg.room_id);
             if (idx === -1) return prev;
-            const updated = { ...prev[idx], last_message: msg.content, last_message_at: msg.created_at };
+            const updated = {
+              ...prev[idx],
+              last_message: msg.content,
+              last_message_at: msg.created_at,
+              unread_count: prev[idx].unread_count + 1,
+            };
             return [updated, ...prev.filter((r) => r.id !== msg.room_id)];
           });
+          // 탭 badge 즉시 증가
+          window.dispatchEvent(new CustomEvent('unreadUpdate'));
         }
       )
       .on(
@@ -248,48 +334,79 @@ export default function ChatListPage() {
       ) : (
         <div className="space-y-1">
           {rooms.map((room) => (
-            <button
-              key={room.id}
-              onClick={() =>
-                room.roomType === 'gather'
-                  ? router.push(`/dashboard/gather/chat/${room.id}`)
-                  : router.push(`/dashboard/chat/${room.id}`)
-              }
-              className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-gray-100 transition text-left"
-            >
-              {room.roomType === 'gather' ? (
-                <div className="w-12 h-12 rounded-full bg-[#e8f0e9] flex items-center justify-center text-2xl flex-shrink-0">
-                  👥
-                </div>
-              ) : (
-                <AvatarImage src={room.other_image_url ?? null} size={48} />
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1">
-                  {room.roomType === 'gather' ? (
-                    <span className="font-semibold text-gray-800 truncate">{room.gather_title}</span>
-                  ) : (
-                    <>
-                      <span className="font-semibold text-gray-800 truncate">{room.other_nickname}</span>
-                      {room.other_flag && (
-                        <span className="text-base">{FLAG_EMOJI_MAP[room.other_flag] ?? ''}</span>
-                      )}
-                    </>
-                  )}
-                  {room.roomType === 'gather' && (
-                    <span className="ml-1 text-xs bg-[#e8f0e9] text-[#6b8f6e] px-1.5 py-0.5 rounded-full flex-shrink-0">
-                      {t('gather.title')}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500 truncate mt-0.5">
-                  {room.last_message ?? (room.roomType === 'gather' ? t('chat.gatherCreated') : t('chat.noMessages'))}
-                </p>
+            <div key={room.id} className="relative overflow-hidden rounded-xl">
+              {/* 삭제 버튼 (뒤에 숨겨짐) */}
+              <div className="absolute right-0 top-0 bottom-0 flex items-center">
+                <button
+                  onClick={() => hideRoom(room.id, room.roomType)}
+                  className="h-full px-5 bg-red-500 text-white text-sm font-medium"
+                >
+                  {t('common.delete')}
+                </button>
               </div>
-              {room.last_message_at && (
-                <span className="text-xs text-gray-400 flex-shrink-0">{timeAgo(room.last_message_at)}</span>
-              )}
-            </button>
+              {/* 채팅방 항목 */}
+              <div
+                className="relative bg-white transition-transform duration-200"
+                style={{ transform: revealedId === room.id ? 'translateX(-72px)' : 'translateX(0)' }}
+              >
+                <button
+                  onClick={() => {
+                    if (revealedId === room.id) { setRevealedId(null); return; }
+                    room.roomType === 'gather'
+                      ? router.push(`/dashboard/gather/chat/${room.id}`)
+                      : router.push(`/dashboard/chat/${room.id}`);
+                  }}
+                  onContextMenu={(e) => { e.preventDefault(); setRevealedId(revealedId === room.id ? null : room.id); }}
+                  onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+                  onTouchEnd={(e) => {
+                    const dx = touchStartX.current - e.changedTouches[0].clientX;
+                    if (dx > 50) { setRevealedId(room.id); }
+                    else if (dx < -20) { setRevealedId(null); }
+                  }}
+                  className="w-full flex items-center gap-4 p-4 hover:bg-gray-50 transition text-left"
+                >
+                  {room.roomType === 'gather' ? (
+                    <div className="w-12 h-12 rounded-full bg-[#e8f0e9] flex items-center justify-center text-2xl flex-shrink-0">
+                      👥
+                    </div>
+                  ) : (
+                    <AvatarImage src={room.other_image_url ?? null} size={48} />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1">
+                      {room.roomType === 'gather' ? (
+                        <span className="font-semibold text-gray-800 truncate">{room.gather_title}</span>
+                      ) : (
+                        <>
+                          <span className="font-semibold text-gray-800 truncate">{room.other_nickname}</span>
+                          {room.other_flag && (
+                            <span className="text-base">{FLAG_EMOJI_MAP[room.other_flag] ?? ''}</span>
+                          )}
+                        </>
+                      )}
+                      {room.roomType === 'gather' && (
+                        <span className="ml-1 text-xs bg-[#e8f0e9] text-[#6b8f6e] px-1.5 py-0.5 rounded-full flex-shrink-0">
+                          {t('gather.title')}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500 truncate mt-0.5">
+                      {room.last_message ?? (room.roomType === 'gather' ? t('chat.gatherCreated') : t('chat.noMessages'))}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    {room.last_message_at && (
+                      <span className="text-xs text-gray-400">{timeAgo(room.last_message_at)}</span>
+                    )}
+                    {room.unread_count > 0 && (
+                      <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                        {room.unread_count > 99 ? '99+' : room.unread_count}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       )}

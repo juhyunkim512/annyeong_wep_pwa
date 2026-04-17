@@ -349,9 +349,6 @@ export default function HelpPage() {
   const faqs = [
     { question: t('help.faqs.q1'), answer: t('help.faqs.a1') },
     { question: t('help.faqs.q2'), answer: t('help.faqs.a2') },
-    { question: t('help.faqs.q3'), answer: t('help.faqs.a3') },
-    { question: t('help.faqs.q4'), answer: t('help.faqs.a4') },
-    { question: t('help.faqs.q5'), answer: t('help.faqs.a5') },
   ]
 
   return (

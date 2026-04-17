@@ -16,7 +16,7 @@ function getDefaultLanguageFromCountry(country: string): string {
 
 export async function POST(req: Request) {
   try {
-    const { email, password, nickname, flag, purpose, current_status } =
+    const { email, password, nickname, flag, purpose, current_status, gender } =
       await req.json();
 
     if (!email || !password || !nickname || !flag || !purpose || !current_status) {
@@ -123,6 +123,7 @@ export async function POST(req: Request) {
       uselanguage,
       purpose,
       current_status,
+      ...(gender ? { gender } : {}),
     });
 
     if (profileError) {

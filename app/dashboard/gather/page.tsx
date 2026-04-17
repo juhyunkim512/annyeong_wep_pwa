@@ -222,10 +222,26 @@ export default function GatherPage() {
         </button>
       </div>
 
+      {/* 비로그인 상태 */}
+      {!loading && !isLoggedIn ? (
+        <div className="mt-4">
+          <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+            <h2 className="text-lg font-bold mb-4">{t('auth.loginRequiredDesc')}</h2>
+            <button
+              className="bg-[#9DB8A0] text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90"
+              onClick={() => setIsLoginOpen(true)}
+            >
+              {t('auth.login')}
+            </button>
+          </div>
+          <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+        </div>
+      ) : null}
+
       {/* View */}
       {loading ? (
         <div className="text-center py-12 text-gray-400">{t('common.loading')}</div>
-      ) : posts.length === 0 ? (
+      ) : !isLoggedIn ? null : posts.length === 0 ? (
         <div className="text-center py-12 text-gray-400">{t('gather.noGatherings')}</div>
       ) : viewMode === 'list' ? (
         /* ── 리스트 뷰 ── */
@@ -286,7 +302,7 @@ export default function GatherPage() {
 
       {/* FAB */}
       <button
-        className="fixed bottom-8 right-8 z-50 bg-[#9DB8A0] text-white px-5 py-3 rounded-full font-semibold shadow-lg hover:opacity-90 transition flex items-center gap-2"
+        className="fixed bottom-24 md:bottom-8 right-6 md:right-8 z-50 bg-[#9DB8A0] text-white px-5 py-3 rounded-full font-semibold shadow-lg hover:opacity-90 transition flex items-center gap-2"
         onClick={handleWriteClick}
       >
         + {t('gather.writeGather')}

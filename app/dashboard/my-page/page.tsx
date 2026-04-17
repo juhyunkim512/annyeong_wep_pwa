@@ -34,6 +34,7 @@ export default function MyPagePage() {
     { icon: '📝', label: t('myPage.myPosts'), desc: t('myPage.myPostsDesc'), href: '/dashboard/my-page/posts' },
     { icon: '❤️', label: t('myPage.likedPosts'), desc: t('myPage.likedPostsDesc'), href: '/dashboard/my-page/liked' },
     { icon: '👥', label: t('myPage.friends'), desc: t('myPage.friendsDesc'), href: '/dashboard/my-page/friends' },
+    { icon: '❓', label: t('myPage.help'), desc: t('myPage.helpDesc'), href: '/dashboard/help' },
     { icon: '⚙️', label: t('myPage.settings'), desc: t('myPage.settingsDesc'), href: '/dashboard/my-page/settings' },
   ];
 

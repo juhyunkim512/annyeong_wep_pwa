@@ -14,12 +14,14 @@
     "blockConfirm": "Chặn người dùng này? Mối quan hệ theo dõi sẽ bị xóa.",
     "blocked": "Bạn đã chặn người dùng này.",
     "noMessages": "Chưa có tin nhắn. Hãy chào nhau nào!",
-    "sendFailed": "Gửi tin nhắn thất bại.",    "gatherCreated": "Nhóm chat đã được tạo.",    "you": "Bạn"
+    "sendFailed": "Gửi tin nhắn thất bại.",
+    "gatherCreated": "Nhóm chat đã được tạo.",
+    "you": "Bạn"
   },
   "nav": {
     "main": "Trang chính",
     "community": "Cộng đồng",
-    "services": "Dịch vụ",
+    "services": "Dịch vụ người nước ngoài",
     "help": "Trợ giúp",
     "myPage": "Trang của tôi",
     "chat": "Trò chuyện",
@@ -126,6 +128,7 @@
     "trendingPosts": "🔥 Bài viết thịnh hành",
     "noRecentPosts": "Chưa có bài viết mới.",
     "noTrendingPosts": "Hiện không có bài viết thịnh hành.",
+    "viewAll": "Xem tất cả →",
     "banners": {
       "policy": {
         "title": "Chính sách hỗ trợ người nước ngoài",
@@ -152,10 +155,12 @@
     "myPosts": "Bài viết của tôi",
     "likedPosts": "Bài viết đã thích",
     "friends": "Bạn bè",
+    "help": "Trợ giúp",
     "settings": "Cài đặt",
     "myPostsDesc": "Các bài bạn đã đăng",
     "likedPostsDesc": "Các bài bạn đã thích",
     "friendsDesc": "Bạn bè & người dùng bị chặn",
+    "helpDesc": "Câu hỏi thường gặp & hỗ trợ",
     "settingsDesc": "Hồ sơ, mật khẩu, ngôn ngữ",
     "signInPrompt": "Đăng nhập để xem hồ sơ của bạn",
     "noPosts": "Chưa có bài viết nào.",
@@ -269,14 +274,8 @@
     "faqs": {
       "q1": "ANNYEONG có thực sự miễn phí không?",
       "a1": "Truy cập cộng đồng và thông tin cơ bản hoàn toàn miễn phí. Một số dịch vụ cao cấp có thể mất phí, nhưng tư vấn ban đầu luôn miễn phí.",
-      "q2": "Mất bao lâu để nhận được hỗ trợ?",
-      "a2": "Chúng tôi phản hồi hầu hết câu hỏi trong vòng 1-2 giờ. Trường hợp khẩn cấp được ưu tiên.",
-      "q3": "Tôi cần tài liệu gì cho visa?",
-      "a3": "Tùy thuộc vào loại visa. Tham gia cộng đồng hoặc liên hệ chúng tôi để được hướng dẫn cụ thể.",
-      "q4": "Tôi có thể dùng ANNYEONG trước khi đến Hàn Quốc không?",
-      "a4": "Hoàn toàn có thể! Nền tảng của chúng tôi giúp bạn chuẩn bị trước khi đến.",
-      "q5": "Hỗ trợ những ngôn ngữ nào?",
-      "a5": "Chúng tôi hỗ trợ tiếng Hàn, Anh, Trung, Nhật, Việt. Sắp thêm ngôn ngữ mới!"
+      "q2": "Hỗ trợ những ngôn ngữ nào?",
+      "a2": "Chúng tôi hỗ trợ tiếng Hàn, Anh, Trung, Nhật, Việt và Tây Ban Nha."
     },
     "shareIdea": {
       "title": "💡 Chia sẻ ý tưởng",
@@ -370,7 +369,11 @@
     "statusOptions": {
       "living": "Đang sống ở Hàn Quốc",
       "planning": "Dự định chuyển đến Hàn Quốc"
-    }
+    },
+    "gender": "Giới tính",
+    "genderMale": "Nam",
+    "genderFemale": "Nữ",
+    "genderNote": "* Giới tính của bạn không được hiển thị công khai và chỉ dùng cho mục đích phân tích dữ liệu."
   },
   "findId": {
     "title": "Tìm tài khoản",
@@ -469,7 +472,8 @@
       "title": "Cơ hội việc làm",
       "desc": "Khám phá danh sách việc làm bán thời gian và toàn thời gian"
     }
-  },  "consult": {
+  },
+  "consult": {
     "applyBtn": "Đăng ký tư vấn",
     "modalTitle": "Yêu cầu tư vấn",
     "name": "Họ tên",
@@ -498,7 +502,8 @@
     "privacyNote": "Thông tin của bạn chỉ được dùng cho mục đích tư vấn.",
     "successTitle": "Nhận đơn thành công!",
     "successDesc": "Chúng tôi sẽ phản hồi trong vòng 1 ngày làm việc."
-  },  "guide": {
+  },
+  "guide": {
     "hero": {
       "title": "Sống ở Hàn Quốc, ANNYEONG là điều không thể thiếu",
       "subtitle": "Giống như con người cần nước và không khí, ANNYEONG không phải là lựa chọn mà là điều bắt buộc khi sống ở Hàn Quốc"

@@ -266,7 +266,7 @@ export default function CommunityPage() {
 
       {/* FAB */}
       <button
-        className="fixed bottom-8 right-8 z-50 bg-[#9DB8A0] text-white px-5 py-3 rounded-full font-semibold shadow-lg hover:opacity-90 transition flex items-center gap-2"
+        className="fixed bottom-24 md:bottom-8 right-6 md:right-8 z-50 bg-[#9DB8A0] text-white px-5 py-3 rounded-full font-semibold shadow-lg hover:opacity-90 transition flex items-center gap-2"
         onClick={handleWriteClick}
       >
         + {t('community.writePost')}

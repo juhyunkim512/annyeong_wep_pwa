@@ -13,6 +13,7 @@ interface SignupFormData {
   flag: string;
   purpose: 'community' | 'service' | 'information';
   current_status: 'living_in_korea' | 'planning_to_move';
+  gender: 'male' | 'female';
 }
 
 interface ValidationStatus {
@@ -50,6 +51,7 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
     flag: 'korea',
     purpose: 'community',
     current_status: 'living_in_korea',
+    gender: 'male',
   });
 
   const PURPOSE_OPTIONS = [
@@ -301,6 +303,7 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
           flag: formData.flag,
           purpose: formData.purpose,
           current_status: formData.current_status,
+          gender: formData.gender,
         }),
       });
 
@@ -327,6 +330,7 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
           flag: 'korea',
           purpose: 'community',
           current_status: 'living_in_korea',
+          gender: 'male',
         });
         setValidationStatus({ nickname: null });
         setCheckedFields({ nickname: false });
@@ -526,6 +530,29 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Gender */}
+          <div>
+            <label className="block text-sm font-semibold mb-2">{t('signup.gender')}</label>
+            <div className="flex gap-2">
+              {(['male', 'female'] as const).map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, gender: g }))}
+                  disabled={loading}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+                    formData.gender === g
+                      ? 'bg-[#9DB8A0] text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  } disabled:opacity-50`}
+                >
+                  {g === 'male' ? t('signup.genderMale') : t('signup.genderFemale')}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-1.5">{t('signup.genderNote')}</p>
           </div>
 
           {/* Messages */}

@@ -2,7 +2,7 @@
   "nav": {
     "main": "Main",
     "community": "Community",
-    "services": "Services",
+    "services": "Foreigner Services",
     "help": "Help",
     "myPage": "My Page",
     "chat": "Chat",
@@ -128,6 +128,7 @@
     "trendingPosts": "🔥 Trending Posts",
     "noRecentPosts": "No recent posts yet.",
     "noTrendingPosts": "No trending posts right now.",
+    "viewAll": "View all →",
     "banners": {
       "policy": {
         "title": "Support Policies for Foreigners",
@@ -154,10 +155,12 @@
     "myPosts": "My Posts",
     "likedPosts": "Liked Posts",
     "friends": "Friends",
+    "help": "Help",
     "settings": "Settings",
     "myPostsDesc": "Posts you've published",
     "likedPostsDesc": "Posts you've liked",
     "friendsDesc": "Friends & blocked users",
+    "helpDesc": "FAQ & support",
     "settingsDesc": "Profile, password, language",
     "signInPrompt": "Sign in to view your profile",
     "noPosts": "No posts yet.",
@@ -271,14 +274,8 @@
     "faqs": {
       "q1": "Is ANNYEONG really free?",
       "a1": "Community access and basic info are completely free. Some premium services may have costs, but initial consultation is always free.",
-      "q2": "How long does it take to get help?",
-      "a2": "We respond within 1-2 hours for most inquiries. For urgent matters, we prioritize faster responses.",
-      "q3": "What documents do I need for a visa?",
-      "a3": "It depends on your visa type. We offer personalized guidance - join the community or contact us for specific requirements.",
-      "q4": "Can I use ANNYEONG before arriving in Korea?",
-      "a4": "Absolutely! Our platform helps people prepare before they arrive, so you can get a head start on settling in.",
-      "q5": "What languages are supported?",
-      "a5": "We support Korean, English, Chinese, Japanese, Vietnamese. More languages coming soon!"
+      "q2": "What languages are supported?",
+      "a2": "We support Korean, English, Chinese, Japanese, Vietnamese, and Spanish."
     },
     "shareIdea": {
       "title": "💡 Share Your Idea",
@@ -372,7 +369,11 @@
     "statusOptions": {
       "living": "Currently Living in Korea",
       "planning": "Planning to Move to Korea"
-    }
+    },
+    "gender": "Gender",
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "genderNote": "* Your gender is not publicly displayed and is used only for data analysis."
   },
   "findId": {
     "title": "Find ID",

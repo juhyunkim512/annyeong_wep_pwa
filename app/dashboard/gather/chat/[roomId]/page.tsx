@@ -131,6 +131,14 @@ export default function GatherChatPage() {
 
       // 초기 번역
       void translateMessages(data.messages || [], userLang, session.access_token);
+
+      // 읽음 상태 갱신 후 layout에 즉시 반영
+      supabase.from('chat_room_read_state').upsert(
+        { room_id: roomId, room_type: 'gather', user_id: session.user.id, last_read_at: new Date().toISOString() },
+        { onConflict: 'room_id,room_type,user_id' }
+      ).then(() => {
+        window.dispatchEvent(new CustomEvent('unreadUpdate'));
+      });
     } catch {
       router.push('/dashboard/gather');
     } finally {

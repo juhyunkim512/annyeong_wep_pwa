@@ -3,10 +3,11 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import '@/lib/i18n'
 import { usePushNotification } from '@/lib/hooks/usePushNotification'
+import { supabase } from '@/lib/supabase/client'
 
 const PULL_THRESHOLD = 72 // px
 
@@ -16,7 +17,6 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { t } = useTranslation('common')
 
   // 푸쉬 알림 구독 (로그인 상태면 자동 요청)
@@ -27,6 +27,57 @@ export default function DashboardLayout({
   const [refreshing, setRefreshing] = useState(false)
   const touchStartY = useRef(0)
   const isPulling = useRef(false)
+
+  // ── Total unread badge ──────────────────────────────────
+  const [totalUnread, setTotalUnread] = useState(0)
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const uid = session.user.id
+
+      const { data: directRooms } = await supabase
+        .from('chat_room')
+        .select('id, user_a, user_b, user_a_hidden, user_b_hidden')
+        .or(`user_a.eq.${uid},user_b.eq.${uid}`)
+      const visibleDirect = (directRooms || []).filter((r: any) =>
+        (r.user_a === uid && !r.user_a_hidden) ||
+        (r.user_b === uid && !r.user_b_hidden)
+      )
+
+      const { data: directReadStates } = await supabase
+        .from('chat_room_read_state')
+        .select('room_id, last_read_at')
+        .eq('user_id', uid)
+        .eq('room_type', 'direct')
+      const directReadMap: Record<string, string> = {}
+      for (const rs of directReadStates || []) directReadMap[rs.room_id] = rs.last_read_at
+
+      let count = 0
+      await Promise.all(visibleDirect.map(async (r: any) => {
+        const lastRead = directReadMap[r.id] ?? null
+        let query = supabase
+          .from('chat_message')
+          .select('id', { count: 'exact', head: true })
+          .eq('room_id', r.id)
+          .neq('sender_id', uid)
+        if (lastRead) query = query.gt('created_at', lastRead)
+        const { count: c } = await query
+        count += c ?? 0
+      }))
+
+      setTotalUnread(count)
+    }
+    fetchUnread()
+    const handler = () => fetchUnread()
+    window.addEventListener('focus', handler)
+    window.addEventListener('unreadUpdate', handler)
+    return () => {
+      window.removeEventListener('focus', handler)
+      window.removeEventListener('unreadUpdate', handler)
+    }
+  }, [pathname])
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     const main = e.currentTarget as HTMLElement
@@ -57,6 +108,8 @@ export default function DashboardLayout({
     }
   }, [pullY])
 
+  const isChatRoom = /^\/dashboard\/(chat|gather\/chat)\/[^/]+/.test(pathname)
+
   const menuItems = [
     { icon: '🏠', label: t('nav.main'), href: '/dashboard/home' },
     { icon: '💬', label: t('nav.community'), href: '/dashboard/community' },
@@ -65,6 +118,14 @@ export default function DashboardLayout({
     { icon: '🛠', label: t('nav.services'), href: '/dashboard/services' },
     { icon: '❓', label: t('nav.help'), href: '/dashboard/help' },
     { icon: '👤', label: t('nav.myPage'), href: '/dashboard/my-page' },
+  ]
+
+  const bottomTabItems = [
+    { icon: '/icons/tab-home.png', label: t('nav.main'), href: '/dashboard/home' },
+    { icon: '/icons/tab-community.png', label: t('nav.community'), href: '/dashboard/community' },
+    { icon: '/icons/tab-gather.png', label: t('nav.gather'), href: '/dashboard/gather' },
+    { icon: '/icons/tab-chat.png', label: t('nav.chat'), href: '/dashboard/chat' },
+    { icon: '/icons/tab-mypage.png', label: t('nav.myPage'), href: '/dashboard/my-page' },
   ]
                                             
 
@@ -116,7 +177,7 @@ export default function DashboardLayout({
       </aside>
 
       {/* Mobile Header */}
-      <div className="md:hidden w-full fixed top-0 z-40 bg-white border-b border-gray-200">
+      <div className={`md:hidden w-full fixed top-0 z-40 bg-white border-b border-gray-200 ${isChatRoom ? 'hidden' : ''}`}>
         <div className="flex items-center justify-between p-4">
           <Link
             href="/dashboard/home"
@@ -132,38 +193,12 @@ export default function DashboardLayout({
             />
             ANNYEONG
           </Link>
-
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 hover:bg-gray-100 rounded-lg"
-            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-          >
-            {mobileMenuOpen ? '✕' : '☰'}
-          </button>
         </div>
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <nav className="border-t border-gray-200 p-4 space-y-2 bg-white">
-            {menuItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <span className="text-xl">{item.icon}</span>
-                <span>{item.label}</span>
-              </Link>
-            ))}
-
-          </nav>
-        )}
       </div>
 
       {/* Main Content */}
       <main
-        className="flex-1 md:mt-0 mt-24 overflow-auto"
+        className={`md:mt-0 md:pb-0 ${isChatRoom ? 'flex-1 flex flex-col mt-0 pb-0 overflow-hidden h-screen' : 'flex-1 mt-16 pb-32 overflow-auto'}`}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -181,8 +216,36 @@ export default function DashboardLayout({
             }}
           />
         </div>
-        <div className="px-6 pt-0 pb-6 md:px-8 md:pt-2 md:pb-8">{children}</div>
+        <div className={isChatRoom ? 'h-full flex flex-col' : 'px-6 pt-0 pb-6 md:px-8 md:pt-2 md:pb-8'}>{children}</div>
       </main>
+
+      {/* Mobile Bottom Tab Bar */}
+      {!isChatRoom && (
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 flex">
+        {bottomTabItems.map((item) => {
+          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex-1 flex flex-col items-center justify-center pt-1 pb-8 gap-1 transition ${
+                isActive ? 'opacity-100' : 'opacity-40'
+              }`}
+            >
+              <div className="relative">
+                <Image src={item.icon} alt={item.label} width={48} height={50} className="w-9 h-auto" />
+                {item.href === '/dashboard/chat' && totalUnread > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                    {totalUnread > 99 ? '99+' : totalUnread}
+                  </span>
+                )}
+              </div>
+              <span className={`text-[13px] font-medium leading-none ${isActive ? 'text-[#9DB8A0]' : 'text-gray-400'}`}>{item.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
+      )}
     </div>
   )
 }
