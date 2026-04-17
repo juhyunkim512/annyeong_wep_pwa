@@ -225,12 +225,10 @@ export default function GatherDetailModal({
       });
 
       if (res.ok) {
-        const { chat_room_id } = await res.json();
         await fetchDetail();
         onChanged();
-        // 단톡방으로 이동
-        router.push(`/dashboard/gather/chat/${chat_room_id}`);
         onClose();
+        router.push('/dashboard/gather');
       }
     } catch { /* ignore */ }
     setConfirming(false);

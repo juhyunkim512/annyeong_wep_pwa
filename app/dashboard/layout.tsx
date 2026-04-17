@@ -198,12 +198,13 @@ export default function DashboardLayout({
 
       {/* Main Content */}
       <main
-        className={`md:mt-0 md:pb-0 ${isChatRoom ? 'flex-1 flex flex-col mt-0 pb-0 overflow-hidden h-screen' : 'flex-1 mt-16 pb-32 overflow-auto'}`}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
+        className={`md:mt-0 md:pb-0 ${isChatRoom ? 'flex-1 flex flex-col mt-0 p-0 overflow-hidden' : 'flex-1 mt-16 pb-32 overflow-auto'}`}
+        onTouchStart={!isChatRoom ? onTouchStart : undefined}
+        onTouchMove={!isChatRoom ? onTouchMove : undefined}
+        onTouchEnd={!isChatRoom ? onTouchEnd : undefined}
       >
         {/* Pull-to-refresh 인디케이터 (모바일 전용) */}
+        {!isChatRoom && (
         <div
           className="md:hidden flex items-center justify-center overflow-hidden transition-all duration-200"
           style={{ height: refreshing ? 48 : pullY > 0 ? pullY : 0 }}
@@ -216,7 +217,8 @@ export default function DashboardLayout({
             }}
           />
         </div>
-        <div className={isChatRoom ? 'h-full flex flex-col' : 'px-6 pt-0 pb-6 md:px-8 md:pt-2 md:pb-8'}>{children}</div>
+        )}
+        <div className={isChatRoom ? 'flex-1 flex flex-col min-h-0' : 'px-6 pt-0 pb-6 md:px-8 md:pt-2 md:pb-8'}>{children}</div>
       </main>
 
       {/* Mobile Bottom Tab Bar */}

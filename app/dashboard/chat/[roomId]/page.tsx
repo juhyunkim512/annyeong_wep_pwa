@@ -361,7 +361,7 @@ export default function ChatRoomPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen md:h-[calc(100vh-32px)] w-full md:max-w-lg md:mx-auto">
+    <div className="flex flex-col h-screen w-full">
 
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white flex-shrink-0">

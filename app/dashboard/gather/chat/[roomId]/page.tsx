@@ -249,11 +249,11 @@ export default function GatherChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] max-w-2xl mx-auto">
+    <div className="flex flex-col h-screen w-full">
       {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b bg-white">
         <button
-          onClick={() => router.push('/dashboard/gather')}
+          onClick={() => router.push('/dashboard/chat')}
           className="text-gray-500 hover:text-gray-700 text-lg"
         >
           ←

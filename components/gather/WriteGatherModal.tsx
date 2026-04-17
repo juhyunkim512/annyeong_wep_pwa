@@ -43,9 +43,15 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
   const [maxParticipants, setMaxParticipants] = useState(4);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showFullscreenMap, setShowFullscreenMap] = useState(false);
 
   const handleMapSelect = useCallback((lat: number, lng: number, label: string) => {
     setMapLocation({ lat, lng, label });
+  }, []);
+
+  const handleFullscreenMapSelect = useCallback((lat: number, lng: number, label: string) => {
+    setMapLocation({ lat, lng, label });
+    setShowFullscreenMap(false);
   }, []);
 
   const getMeetAt = (): string => {
@@ -154,6 +160,29 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
   if (!isOpen) return null;
 
   return (
+    <>
+    {/* 전체화면 지도 오버레이 */}
+    {showFullscreenMap && (
+      <div className="fixed inset-0 z-[200] bg-white flex flex-col">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowFullscreenMap(false)}
+            className="text-gray-600 text-xl leading-none"
+          >
+            ←
+          </button>
+          <span className="text-base font-semibold">위치 선택</span>
+        </div>
+        <div className="flex-1 relative overflow-hidden">
+          <GatherMapPicker
+            onSelect={handleFullscreenMapSelect}
+            hint={t('gather.write.tapToSelectLocation')}
+            fullscreen
+          />
+        </div>
+      </div>
+    )}
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50">
       <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-lg w-full p-5 relative max-h-[90vh] overflow-y-auto">
         {/* Header */}
@@ -236,7 +265,7 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
               </button>
               <button
                 type="button"
-                onClick={() => setLocationTab('map')}
+                onClick={() => { setLocationTab('map'); setShowFullscreenMap(true); }}
                 className={`flex-1 py-1.5 text-sm rounded-lg border transition ${
                   locationTab === 'map'
                     ? 'bg-[#9DB8A0] text-white border-[#9DB8A0]'
@@ -266,9 +295,25 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
               </div>
             ) : (
               <div>
-                <GatherMapPicker onSelect={handleMapSelect} hint={t('gather.write.tapToSelectLocation')} />
-                {mapLocation && (
-                  <p className="text-xs text-gray-500 mt-2 truncate">📍 {mapLocation.label}</p>
+                {mapLocation ? (
+                  <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                    <p className="text-sm text-gray-700 flex-1 truncate">📍 {mapLocation.label}</p>
+                    <button
+                      type="button"
+                      onClick={() => setShowFullscreenMap(true)}
+                      className="text-xs text-[#9DB8A0] border border-[#9DB8A0] px-2 py-1 rounded-lg shrink-0"
+                    >
+                      변경
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowFullscreenMap(true)}
+                    className="w-full py-6 bg-gray-50 border border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-[#9DB8A0] hover:text-[#9DB8A0] transition"
+                  >
+                    🗺️ {t('gather.write.tapToSelectLocation')}
+                  </button>
                 )}
               </div>
             )}
@@ -346,5 +391,6 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
         </form>
       </div>
     </div>
+    </>
   );
 }

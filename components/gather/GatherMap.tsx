@@ -34,9 +34,10 @@ function loadGoogleMaps(): Promise<void> {
 interface GatherMapPickerProps {
   onSelect: (lat: number, lng: number, label: string) => void;
   hint?: string;
+  fullscreen?: boolean;
 }
 
-export function GatherMapPicker({ onSelect, hint }: GatherMapPickerProps) {
+export function GatherMapPicker({ onSelect, hint, fullscreen }: GatherMapPickerProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const [ready, setReady] = useState(false);
@@ -116,13 +117,13 @@ export function GatherMapPicker({ onSelect, hint }: GatherMapPickerProps) {
   }
 
   return (
-    <div className="relative">
+    <div className={`relative${fullscreen ? ' h-full' : ''}`}>
       {/* 지도 */}
-      <div ref={mapRef} className="w-full h-56 rounded-xl overflow-hidden border border-gray-200" />
+      <div ref={mapRef} className={fullscreen ? 'w-full h-full' : 'w-full h-56 rounded-xl overflow-hidden border border-gray-200'} />
 
       {/* 중앙 고정 핀 (pointer-events-none으로 드래그 방해 안 함) */}
       {ready && (
-        <div className="absolute inset-0 flex items-end justify-center pointer-events-none" style={{ paddingBottom: '52px' }}>
+        <div className="absolute pointer-events-none" style={{ bottom: '50%', left: '50%', transform: 'translateX(-50%)' }}>
           <div className="flex flex-col items-center">
             <div className="w-7 h-7 bg-[#9DB8A0] rounded-full border-2 border-white shadow-lg flex items-center justify-center">
               <div className="w-2 h-2 bg-white rounded-full" />
