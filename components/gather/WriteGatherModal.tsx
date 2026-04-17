@@ -38,7 +38,7 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
   const [locationTab, setLocationTab] = useState<'quick' | 'map'>('quick');
   const [selectedQuickLocation, setSelectedQuickLocation] = useState('');
   const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number; label: string } | null>(null);
-  const [timeOption, setTimeOption] = useState<'now' | '30' | '60' | 'custom'>('now');
+  const [timeOption, setTimeOption] = useState<'30' | '60' | '120' | 'custom'>('30');
   const [customTime, setCustomTime] = useState('');
   const [maxParticipants, setMaxParticipants] = useState(4);
   const [loading, setLoading] = useState(false);
@@ -51,14 +51,14 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
   const getMeetAt = (): string => {
     const now = new Date();
     switch (timeOption) {
-      case 'now':
-        return now.toISOString();
       case '30':
         return new Date(now.getTime() + 30 * 60 * 1000).toISOString();
       case '60':
         return new Date(now.getTime() + 60 * 60 * 1000).toISOString();
+      case '120':
+        return new Date(now.getTime() + 120 * 60 * 1000).toISOString();
       case 'custom':
-        if (!customTime) return now.toISOString();
+        if (!customTime) return new Date(now.getTime() + 30 * 60 * 1000).toISOString();
         // customTime은 "HH:mm" 형태
         const [h, m] = customTime.split(':').map(Number);
         const d = new Date();
@@ -66,7 +66,7 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
         if (d < now) d.setDate(d.getDate() + 1); // 이미 지난 시간이면 내일
         return d.toISOString();
       default:
-        return now.toISOString();
+        return new Date(now.getTime() + 30 * 60 * 1000).toISOString();
     }
   };
 
@@ -140,7 +140,7 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
       setLocationTab('quick');
       setSelectedQuickLocation('');
       setMapLocation(null);
-      setTimeOption('now');
+      setTimeOption('30');
       setCustomTime('');
       setMaxParticipants(4);
       setLoading(false);
@@ -278,11 +278,11 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
           <div>
             <label className="block text-sm font-semibold mb-2">{t('gather.write.meetTime')}</label>
             <div className="flex flex-wrap gap-2">
-              {(['now', '30', '60', 'custom'] as const).map((opt) => {
+              {(['30', '60', '120', 'custom'] as const).map((opt) => {
                 const labels: Record<string, string> = {
-                  now: t('gather.write.meetTimeNow'),
                   '30': t('gather.write.meetTime30'),
                   '60': t('gather.write.meetTime60'),
+                  '120': t('gather.write.meetTime120'),
                   custom: t('gather.write.meetTimeCustom'),
                 };
                 return (

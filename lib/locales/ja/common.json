@@ -586,6 +586,7 @@
       "meetTimeNow": "今",
       "meetTime30": "30分後",
       "meetTime60": "1時間後",
+      "meetTime120": "2時間後",
       "meetTimeCustom": "直接選択",
       "maxParticipants": "最大人数",
       "maxParticipantsUnit": "人",

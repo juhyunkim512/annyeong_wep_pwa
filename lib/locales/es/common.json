@@ -586,6 +586,7 @@
       "meetTimeNow": "Ahora",
       "meetTime30": "En 30 min",
       "meetTime60": "En 1 hora",
+      "meetTime120": "En 2 horas",
       "meetTimeCustom": "Personalizar",
       "maxParticipants": "Máx. participantes",
       "maxParticipantsUnit": "",
