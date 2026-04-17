@@ -42,11 +42,15 @@ export async function POST(
     // 글 정보 확인
     const { data: post, error: postError } = await admin
       .from('gather_post')
-      .select('id, author_id, title, meet_at, confirmed, confirmed_chat_room_id, chat_room_id')
+      .select('id, author_id, title, meet_at, confirmed, confirmed_chat_room_id')
       .eq('id', postId)
       .maybeSingle();
 
-    if (postError || !post) {
+    if (postError) {
+      console.error('[gather confirm] post fetch error:', postError);
+      return NextResponse.json({ error: 'Failed to fetch post' }, { status: 500 });
+    }
+    if (!post) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
 
@@ -58,7 +62,7 @@ export async function POST(
     // ✅ 확정 기준: gather_post.confirmed
     if (post.confirmed) {
       return NextResponse.json(
-        { error: 'Already confirmed', chat_room_id: post.confirmed_chat_room_id ?? post.chat_room_id },
+        { error: 'Already confirmed', chat_room_id: post.confirmed_chat_room_id },
         { status: 409 }
       );
     }
@@ -130,7 +134,6 @@ export async function POST(
         confirmed: true,
         confirmed_at: new Date().toISOString(),
         confirmed_chat_room_id: finalRoomId,
-        chat_room_id: finalRoomId, // 하위 호환성 유지
       })
       .eq('id', postId)
       .eq('confirmed', false); // 동시성 안전: 이미 확정된 경우 UPDATE skip
