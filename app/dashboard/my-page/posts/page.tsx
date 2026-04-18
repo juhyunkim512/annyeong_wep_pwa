@@ -46,9 +46,9 @@ export default function MyPostsPage() {
   return (
     <div className="max-w-4xl space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 mt-4">
         <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-800 transition text-xl">‹</button>
-        <h1 className="text-3xl font-bold">{t('myPage.myPosts')}</h1>
+        <h1 className="text-2xl font-bold">{t('myPage.myPosts')}</h1>
       </div>
 
       {loading ? (
@@ -59,7 +59,7 @@ export default function MyPostsPage() {
         </div>
       ) : posts.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 flex flex-col items-center justify-center py-16 text-center">
-          <span className="text-4xl mb-3">📝</span>
+          <img src="/icons/post.png" className="w-10 h-10 object-contain mb-3" />
           <p className="text-gray-500 text-sm">{t('myPage.noPostsWritten')}</p>
           <Link href="/dashboard/community" className="mt-4 text-sm text-[#9DB8A0] font-semibold hover:underline">
             {t('common.exploreCommunity')}

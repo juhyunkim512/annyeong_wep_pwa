@@ -70,9 +70,9 @@ export default function PasswordSettingsPage() {
   return (
     <div className="max-w-4xl space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 mt-4">
         <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-800 transition text-xl">‹</button>
-        <h1 className="text-3xl font-bold">{t('settings.resetPasswordTitle')}</h1>
+        <h1 className="text-2xl font-bold">{t('settings.resetPasswordTitle')}</h1>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6">

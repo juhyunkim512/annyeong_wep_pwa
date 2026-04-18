@@ -183,7 +183,7 @@
     "languageUpdated": "Ngôn ngữ đã được cập nhật!",
     "saving": "Đang lưu...",
     "profilePhoto": "Ảnh hồ sơ",
-    "choosePhoto": "📷 Chọn ảnh",
+    "choosePhoto": "Chọn ảnh",
     "nickname": "Biệt danh",
     "nicknamePlaceholder": "Biệt danh của bạn",
     "nicknameEmpty": "Biệt danh không được để trống.",
@@ -240,7 +240,7 @@
     "reasonPlaceholder": "Chọn lý do",
     "description": "Chi tiết (tùy chọn)",
     "descriptionPlaceholder": "Mô tả chi tiết vấn đề...",
-    "attachImage": "📷 Đính kèm hình ảnh",
+    "attachImage": "Đính kèm hình ảnh",
     "removeImage": "× Xóa",
     "submit": "Gửi báo cáo",
     "submitting": "Đang gửi...",
@@ -278,7 +278,7 @@
       "a2": "Chúng tôi hỗ trợ tiếng Hàn, Anh, Trung, Nhật, Việt và Tây Ban Nha."
     },
     "shareIdea": {
-      "title": "💡 Chia sẻ ý tưởng",
+      "title": "Chia sẻ ý tưởng",
       "ideaTitle": "Tiêu đề",
       "ideaTitlePlaceholder": "Mô tả ý tưởng trong một câu",
       "featureArea": "Lĩnh vực tính năng",
@@ -286,7 +286,7 @@
       "description": "Mô tả",
       "descriptionPlaceholder": "Mô tả chi tiết ý tưởng...",
       "photo": "Ảnh (tùy chọn)",
-      "uploadImage": "📷 Tải ảnh lên",
+      "uploadImage": "Tải ảnh lên",
       "submitBtn": "Gửi ý tưởng",
       "submitting": "Đang gửi...",
       "fillRequired": "Vui lòng điền đầy đủ các trường bắt buộc.",
@@ -300,7 +300,7 @@
       }
     },
     "needHelp": {
-      "title": "🤝 Cần thêm hỗ trợ?",
+      "title": "Cần thêm hỗ trợ?",
       "ideaTitle": "Tiêu đề",
       "ideaTitlePlaceholder": "Tóm tắt ngắn gọn vấn đề",
       "details": "Chi tiết",
@@ -308,7 +308,7 @@
       "contact": "Email / Liên hệ (tùy chọn)",
       "contactPlaceholder": "Chúng tôi có thể liên hệ bạn ở đâu?",
       "photo": "Ảnh (tùy chọn)",
-      "uploadImage": "📷 Tải ảnh lên",
+      "uploadImage": "Tải ảnh lên",
       "sendBtn": "Gửi yêu cầu",
       "sending": "Đang gửi...",
       "fillRequired": "Vui lòng điền đầy đủ các trường bắt buộc.",
@@ -424,7 +424,7 @@
     "content": "Nội dung",
     "contentPlaceholder": "Viết bài của bạn...",
     "photo": "Ảnh (tùy chọn)",
-    "uploadImage": "📷 Tải ảnh lên",
+    "uploadImage": "Tải ảnh lên",
     "submit": "Gửi",
     "saving": "Đang lưu...",
     "fillRequired": "Vui lòng điền đầy đủ các trường bắt buộc.",
@@ -510,20 +510,21 @@
     },
     "why": {
       "title": "Lý do bạn phải dùng ANNYEONG khi sống ở Hàn Quốc",
-      "item1": "Câu trả lời thật từ người thật, không phải AI",
-      "item2": "Thông tin thời gian thực, không phải bài đăng cũ trên mạng xã hội",
-      "item3": "Dịch vụ được tạo ra dành riêng cho người nước ngoài tại Hàn Quốc",
-      "item4": "Dịch thuật thời gian thực + cộng đồng — miễn phí 100%",
-      "item5": "Đăng bài từ 9h–18h, không có trả lời trong 10 phút sẽ được thưởng"
+      "item1": "Kết bạn với người Hàn Quốc",
+      "item2": "Câu trả lời thật từ người thật, không phải AI",
+      "item3": "Thông tin thời gian thực, nhanh hơn mạng xã hội",
+      "item4": "Giao tiếp với người Hàn nhờ dịch thuật thời gian thực",
+      "item5": "Thích nghi với cuộc sống Hàn Quốc nhanh hơn và chính xác hơn"
     },
     "language": {
       "title": "Ngôn ngữ & Dịch thuật",
-      "item1": "Sau khi đăng ký, tất cả bài viết và bình luận được dịch theo thời gian thực",
-      "item2": "Nhận thông báo đẩy để cập nhật nhanh hơn và tiện lợi hơn",
-      "item3": "Chỉ 30 giây để bắt đầu cuộc sống tốt hơn ở Hàn Quốc"
+      "item1": "Tất cả bài viết và bình luận đều được dịch theo thời gian thực",
+      "item2": "Dễ dàng đọc và hiểu ngay bằng ngôn ngữ của bạn",
+      "item3": "Trò chuyện với người Hàn không còn rào cản ngôn ngữ",
+      "item4": "Xem bản gốc để kiểm tra chính xác hơn"
     },
     "app": {
-      "title": "Dùng như một ứng dụng",
+      "title": "❗️Dùng như một ứng dụng❗️",
       "item1": "Thêm vào màn hình chính và dùng như ứng dụng gốc",
       "item2": "Truy cập nhanh hơn và tiện lợi hơn",
       "installBtn": "Xem cách cài đặt"

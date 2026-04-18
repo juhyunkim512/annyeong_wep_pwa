@@ -216,6 +216,7 @@ export default function ReportModal({
                   </div>
                 ) : (
                   <label className="flex items-center gap-2 cursor-pointer w-fit bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm text-gray-600 transition">
+                    <img src="/icons/camera.png" className="w-4 h-4 object-contain" />
                     {t('report.attachImage')}
                     <input
                       type="file"

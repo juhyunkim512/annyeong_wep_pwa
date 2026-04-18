@@ -31,11 +31,12 @@ export default function MyPagePage() {
   const { t } = useTranslation('common');
 
   const MENU_ITEMS = [
-    { icon: '📝', label: t('myPage.myPosts'), desc: t('myPage.myPostsDesc'), href: '/dashboard/my-page/posts' },
-    { icon: '❤️', label: t('myPage.likedPosts'), desc: t('myPage.likedPostsDesc'), href: '/dashboard/my-page/liked' },
-    { icon: '👥', label: t('myPage.friends'), desc: t('myPage.friendsDesc'), href: '/dashboard/my-page/friends' },
-    { icon: '❓', label: t('myPage.help'), desc: t('myPage.helpDesc'), href: '/dashboard/help' },
-    { icon: '⚙️', label: t('myPage.settings'), desc: t('myPage.settingsDesc'), href: '/dashboard/my-page/settings' },
+    { icon: '/icons/post.png', label: t('myPage.myPosts'), desc: t('myPage.myPostsDesc'), href: '/dashboard/my-page/posts' },
+    { icon: '/icons/like.png', label: t('myPage.likedPosts'), desc: t('myPage.likedPostsDesc'), href: '/dashboard/my-page/liked' },
+    { icon: '/icons/tab-community.png', label: t('myPage.friends'), desc: t('myPage.friendsDesc'), href: '/dashboard/my-page/friends' },
+    { icon: '/icons/question.png', label: t('myPage.help'), desc: t('myPage.helpDesc'), href: '/dashboard/my-page/help' },
+    { icon: '/icons/services.png', label: t('nav.services'), desc: t('nav.services'), href: '/dashboard/my-page/services' },
+    { icon: '/icons/setting.png', label: t('myPage.settings'), desc: t('myPage.settingsDesc'), href: '/dashboard/my-page/settings' },
   ];
 
 
@@ -128,7 +129,7 @@ export default function MyPagePage() {
             <Link key={item.href} href={item.href}>
               <div className="bg-white rounded-xl border border-gray-200 flex items-center justify-between px-5 py-4 hover:bg-gray-50 active:bg-gray-100 transition cursor-pointer">
                 <div className="flex items-center gap-4">
-                  <span className="text-2xl">{item.icon}</span>
+                  <img src={item.icon} alt={item.label} className="w-7 h-7 object-contain" />
                   <div>
                     <p className="font-semibold text-gray-900">{item.label}</p>
                     <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>

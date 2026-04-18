@@ -217,7 +217,8 @@ export default function WritePostModal({ isOpen, onClose, onRequireLogin }: Writ
           <div>
             <label className="block text-sm font-semibold mb-2">{t('writePost.photo')}</label>
             <label className="flex items-center gap-2 cursor-pointer w-fit">
-              <span className="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm text-gray-600 transition">
+              <span className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm text-gray-600 transition">
+                <img src="/icons/camera.png" className="w-4 h-4 object-contain" />
                 {t('writePost.uploadImage')} {images.length > 0 && `(${images.length}/3)`}
               </span>
               <input

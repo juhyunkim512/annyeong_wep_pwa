@@ -183,7 +183,7 @@
     "languageUpdated": "言語が更新されました！",
     "saving": "保存中...",
     "profilePhoto": "プロフィール写真",
-    "choosePhoto": "📷 写真を選ぶ",
+    "choosePhoto": "写真を選ぶ",
     "nickname": "ニックネーム",
     "nicknamePlaceholder": "ニックネームを入力してください",
     "nicknameEmpty": "ニックネームは必須です。",
@@ -240,7 +240,7 @@
     "reasonPlaceholder": "理由を選択してください",
     "description": "詳細（任意）",
     "descriptionPlaceholder": "詳細を入力してください...",
-    "attachImage": "📷 画像を添付",
+    "attachImage": "画像を添付",
     "removeImage": "× 削除",
     "submit": "報告を送信",
     "submitting": "送信中...",
@@ -278,7 +278,7 @@
       "a2": "韓国語、英語、中国語、日本語、ベトナム語、スペイン語に対応しています。"
     },
     "shareIdea": {
-      "title": "💡 アイデアをシェア",
+      "title": "アイデアをシェア",
       "ideaTitle": "タイトル",
       "ideaTitlePlaceholder": "アイデアを一言で",
       "featureArea": "機能エリア",
@@ -286,7 +286,7 @@
       "description": "説明",
       "descriptionPlaceholder": "アイデアの詳細を入力してください...",
       "photo": "写真（任意）",
-      "uploadImage": "📷 画像をアップロード",
+      "uploadImage": "画像をアップロード",
       "submitBtn": "アイデアを送信",
       "submitting": "送信中...",
       "fillRequired": "すべての必須項目を入力してください。",
@@ -300,7 +300,7 @@
       }
     },
     "needHelp": {
-      "title": "🤝 もっとサポートが必要ですか？",
+      "title": "もっとサポートが必要ですか？",
       "ideaTitle": "タイトル",
       "ideaTitlePlaceholder": "問題を簡単に要約してください",
       "details": "詳細",
@@ -308,7 +308,7 @@
       "contact": "メール / 連絡先（任意）",
       "contactPlaceholder": "連絡先を教えてください",
       "photo": "写真（任意）",
-      "uploadImage": "📷 画像をアップロード",
+      "uploadImage": "画像をアップロード",
       "sendBtn": "リクエストを送信",
       "sending": "送信中...",
       "fillRequired": "すべての必須項目を入力してください。",
@@ -424,7 +424,7 @@
     "content": "内容",
     "contentPlaceholder": "投稿内容を入力してください...",
     "photo": "写真（任意）",
-    "uploadImage": "📷 画像をアップロード",
+    "uploadImage": "画像をアップロード",
     "submit": "送信",
     "saving": "保存中...",
     "fillRequired": "すべての必須項目を入力してください。",
@@ -510,20 +510,21 @@
     },
     "why": {
       "title": "韓国に住むならANNYEONGを使うべき理由",
-      "item1": "AIではなく、実際の人からのリアルな回答",
-      "item2": "SNSの古い情報ではなく、リアルタイムの情報",
-      "item3": "韓国在住の外国人のために作られたサービス",
-      "item4": "リアルタイム翻訳＋コミュニティ、完全無料",
-      "item5": "9〜18時の間に投稿後10分以内に返信がない場合、報酬あり"
+      "item1": "韓国人の友達を作る",
+      "item2": "AIではなく、実際の人からのリアルな回答",
+      "item3": "SNSより速いリアルタイム情報",
+      "item4": "リアルタイム翻訳で韓国人ともコミュニケーション可能",
+      "item5": "より速く正確に韓国生活に適応できる"
     },
     "language": {
       "title": "言語 & 翻訳",
-      "item1": "登録後、コミュニティの投稿＋コメントがすべてリアルタイム翻訳",
-      "item2": "プッシュ通知・アラートで、より速く便利に利用できます",
-      "item3": "30秒で、より充実した韓国生活を始めましょう"
+      "item1": "投稿もコメントもリアルタイム翻訳",
+      "item2": "自分の言語で簡単に読んですぐ理解",
+      "item3": "韓国人とも言語の壁なく会話できる",
+      "item4": "原文表示でより正確に確認できる"
     },
     "app": {
-      "title": "アプリのように使う",
+      "title": "❗️アプリのように使う❗️",
       "item1": "ホーム画面に追加してアプリのように使用",
       "item2": "より速く、より便利にアクセス可能",
       "installBtn": "インストール方法を見る"

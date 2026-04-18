@@ -193,14 +193,14 @@ export default function FriendsPage() {
   return (
     <div className="max-w-4xl space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 mt-4">
         <button
           onClick={() => router.back()}
           className="text-gray-500 hover:text-gray-800 transition text-xl"
         >
           ‹
         </button>
-        <h1 className="text-3xl font-bold">{t('friends.title')}</h1>
+        <h1 className="text-2xl font-bold">{t('friends.title')}</h1>
       </div>
 
       {/* Tabs */}
@@ -256,7 +256,7 @@ export default function FriendsPage() {
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
           {followingUsers.length === 0 ? (
             <div className="p-8 text-center">
-              <div className="text-4xl mb-3">👥</div>
+              <img src="/icons/tab-mypage.png" className="w-10 h-10 object-contain mb-3" />
               <p className="text-gray-400 text-sm">{t('friends.noFollowing')}</p>
             </div>
           ) : (
@@ -284,7 +284,7 @@ export default function FriendsPage() {
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
           {followerUsers.length === 0 ? (
             <div className="p-8 text-center">
-              <div className="text-4xl mb-3">👥</div>
+              <img src="/icons/tab-mypage.png" className="w-10 h-10 object-contain mb-3" />
               <p className="text-gray-400 text-sm">{t('friends.noFollowers')}</p>
             </div>
           ) : (
@@ -311,7 +311,7 @@ export default function FriendsPage() {
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
           {blockedUsers.length === 0 ? (
             <div className="p-8 text-center">
-              <div className="text-4xl mb-3">🚫</div>
+              <img src="/icons/no.png" className="w-10 h-10 object-contain mx-auto mb-3" />
               <p className="text-gray-400 text-sm">{t('friends.noBlocked')}</p>
             </div>
           ) : (

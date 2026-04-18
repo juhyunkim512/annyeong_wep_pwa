@@ -183,7 +183,7 @@
     "languageUpdated": "Language updated!",
     "saving": "Saving...",
     "profilePhoto": "Profile Photo",
-    "choosePhoto": "📷 Choose Photo",
+    "choosePhoto": "Choose Photo",
     "nickname": "Nickname",
     "nicknamePlaceholder": "Your nickname",
     "nicknameEmpty": "Nickname cannot be empty.",
@@ -240,7 +240,7 @@
     "reasonPlaceholder": "Select a reason",
     "description": "Details (optional)",
     "descriptionPlaceholder": "Please describe the issue in detail...",
-    "attachImage": "📷 Attach Image",
+    "attachImage": "Attach Image",
     "removeImage": "× Remove",
     "submit": "Submit Report",
     "submitting": "Submitting...",
@@ -278,7 +278,7 @@
       "a2": "We support Korean, English, Chinese, Japanese, Vietnamese, and Spanish."
     },
     "shareIdea": {
-      "title": "💡 Share Your Idea",
+      "title": "Share Your Idea",
       "ideaTitle": "Title",
       "ideaTitlePlaceholder": "Your idea in one line",
       "featureArea": "Feature Area",
@@ -286,7 +286,7 @@
       "description": "Description",
       "descriptionPlaceholder": "Describe your idea in detail...",
       "photo": "Photo (optional)",
-      "uploadImage": "📷 Upload Image",
+      "uploadImage": "Upload Image",
       "submitBtn": "Submit Idea",
       "submitting": "Submitting...",
       "fillRequired": "Please fill in all required fields.",
@@ -300,7 +300,7 @@
       }
     },
     "needHelp": {
-      "title": "🤝 Need More Help?",
+      "title": "Need More Help?",
       "ideaTitle": "Title",
       "ideaTitlePlaceholder": "Brief summary of your issue",
       "details": "Details",
@@ -308,7 +308,7 @@
       "contact": "Email / Contact (optional)",
       "contactPlaceholder": "Where should we reach you?",
       "photo": "Photo (optional)",
-      "uploadImage": "📷 Upload Image",
+      "uploadImage": "Upload Image",
       "sendBtn": "Send Request",
       "sending": "Sending...",
       "fillRequired": "Please fill in all required fields.",
@@ -424,7 +424,7 @@
     "content": "Content",
     "contentPlaceholder": "Write your post...",
     "photo": "Photo (optional)",
-    "uploadImage": "📷 Upload Image",
+    "uploadImage": "Upload Image",
     "submit": "Submit",
     "saving": "Saving...",
     "fillRequired": "Please fill all required fields.",
@@ -510,20 +510,21 @@
     },
     "why": {
       "title": "Why ANNYEONG is essential for life in Korea",
-      "item1": "Real answers from real people, not AI",
-      "item2": "Real-time info — not outdated posts from old SNS",
-      "item3": "A service built specifically for foreigners in Korea",
-      "item4": "Real-time translation + community — 100% free",
-      "item5": "No reply within 10 min (9am–6pm)? You get rewarded"
+      "item1": "Make Korean friends",
+      "item2": "Real answers from real people, not AI",
+      "item3": "Real-time info faster than SNS",
+      "item4": "Communicate with Koreans too, via real-time translation",
+      "item5": "Adapt to life in Korea faster and more accurately"
     },
     "language": {
       "title": "Language & Translation",
-      "item1": "All posts and comments are translated in real-time after sign-up",
-      "item2": "Get push notifications and stay updated faster",
-      "item3": "Start a better life in Korea in just 30 seconds"
+      "item1": "All posts and comments translated in real-time",
+      "item2": "Easily read and understand in your own language",
+      "item3": "Chat with Koreans without language barriers",
+      "item4": "View the original text for even more accuracy"
     },
     "app": {
-      "title": "Use it like an app",
+      "title": "❗️Use it like an app❗️",
       "item1": "Add to your home screen and use it like a native app",
       "item2": "Faster and more convenient access",
       "installBtn": "How to install"

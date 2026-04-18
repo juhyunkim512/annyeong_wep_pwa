@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import LoginModal from '@/components/common/LoginModal'
 import { useTranslation } from 'react-i18next'
@@ -133,7 +134,8 @@ function ShareIdeaModal({ onClose }: { onClose: () => void }) {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('help.shareIdea.photo')}</label>
               <label className="flex items-center gap-2 cursor-pointer w-fit">
-                <span className="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm text-gray-600 transition">
+                <span className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm text-gray-600 transition">
+                  <img src="/icons/camera.png" className="w-4 h-4 object-contain" />
                   {t('help.shareIdea.uploadImage')} {images.length > 0 && `(${images.length}/3)`}
                 </span>
                 <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} />
@@ -299,7 +301,8 @@ function NeedHelpModal({ onClose }: { onClose: () => void }) {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('help.needHelp.photo')}</label>
               <label className="flex items-center gap-2 cursor-pointer w-fit">
-                <span className="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm text-gray-600 transition">
+                <span className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm text-gray-600 transition">
+                  <img src="/icons/camera.png" className="w-4 h-4 object-contain" />
                   {t('help.needHelp.uploadImage')} {images.length > 0 && `(${images.length}/3)`}
                 </span>
                 <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} />
@@ -332,10 +335,15 @@ function NeedHelpModal({ onClose }: { onClose: () => void }) {
 // Help Page
 // ──────────────────────────────────────────
 export default function HelpPage() {
+  const router = useRouter()
   const { t } = useTranslation('common')
   const [isShareIdeaOpen, setIsShareIdeaOpen] = useState(false)
   const [isNeedHelpOpen, setIsNeedHelpOpen] = useState(false)
   const [isLoginOpen, setIsLoginOpen] = useState(false)
+
+  useEffect(() => {
+    document.querySelector('main')?.scrollTo(0, 0)
+  }, [])
 
   const requireAuth = async (action: () => void) => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -353,7 +361,10 @@ export default function HelpPage() {
 
   return (
     <div className="max-w-4xl space-y-6">
-      <h1 className="text-4xl font-bold">{t('help.title')}</h1>
+      <div className="flex items-center gap-3 mt-4">
+        <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-800 transition text-xl">‹</button>
+        <h1 className="text-2xl font-bold">{t('help.title')}</h1>
+      </div>
 
       {/* FAQ */}
       <section>

@@ -150,13 +150,11 @@ export default function DashboardLayout({
   const isChatRoom = /^\/dashboard\/(chat|gather\/chat)\/[^/]+/.test(pathname)
 
   const menuItems = [
-    { icon: '🏠', label: t('nav.main'), href: '/dashboard/home' },
-    { icon: '💬', label: t('nav.community'), href: '/dashboard/community' },
-    { icon: '🙌', label: t('nav.gather'), href: '/dashboard/gather' },
-    { icon: '✉️', label: t('nav.chat'), href: '/dashboard/chat' },
-    { icon: '🛠', label: t('nav.services'), href: '/dashboard/services' },
-    { icon: '❓', label: t('nav.help'), href: '/dashboard/help' },
-    { icon: '👤', label: t('nav.myPage'), href: '/dashboard/my-page' },
+    { icon: '/icons/tab-home.png', label: t('nav.main'), href: '/dashboard/home' },
+    { icon: '/icons/tab-community.png', label: t('nav.community'), href: '/dashboard/community' },
+    { icon: '/icons/tab-gather.png', label: t('nav.gather'), href: '/dashboard/gather' },
+    { icon: '/icons/tab-chat.png', label: t('nav.chat'), href: '/dashboard/chat' },
+    { icon: '/icons/tab-mypage.png', label: t('nav.myPage'), href: '/dashboard/my-page' },
   ]
 
   const bottomTabItems = [
@@ -205,7 +203,7 @@ export default function DashboardLayout({
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <span className="text-xl">{item.icon}</span>
+                <img src={item.icon} alt={item.label} className="w-6 h-6 object-contain" />
                 <span>{item.label}</span>
               </Link>
             )

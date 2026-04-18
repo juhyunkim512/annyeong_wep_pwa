@@ -183,7 +183,7 @@
     "languageUpdated": "¡Idioma actualizado!",
     "saving": "Guardando...",
     "profilePhoto": "Foto de perfil",
-    "choosePhoto": "📷 Elegir foto",
+    "choosePhoto": "Elegir foto",
     "nickname": "Apodo",
     "nicknamePlaceholder": "Tu apodo",
     "nicknameEmpty": "El apodo no puede estar vacío.",
@@ -240,7 +240,7 @@
     "reasonPlaceholder": "Selecciona un motivo",
     "description": "Detalles (opcional)",
     "descriptionPlaceholder": "Describe el problema en detalle...",
-    "attachImage": "📷 Adjuntar imagen",
+    "attachImage": "Adjuntar imagen",
     "removeImage": "× Eliminar",
     "submit": "Enviar reporte",
     "submitting": "Enviando...",
@@ -278,7 +278,7 @@
       "a2": "Admitimos coreano, inglés, chino, japonés, vietnamita y español."
     },
     "shareIdea": {
-      "title": "💡 Comparte tu idea",
+      "title": "Comparte tu idea",
       "ideaTitle": "Título",
       "ideaTitlePlaceholder": "Tu idea en una línea",
       "featureArea": "Área de función",
@@ -286,7 +286,7 @@
       "description": "Descripción",
       "descriptionPlaceholder": "Describe tu idea en detalle...",
       "photo": "Foto (opcional)",
-      "uploadImage": "📷 Subir imagen",
+      "uploadImage": "Subir imagen",
       "submitBtn": "Enviar idea",
       "submitting": "Enviando...",
       "fillRequired": "Por favor completa todos los campos requeridos.",
@@ -300,7 +300,7 @@
       }
     },
     "needHelp": {
-      "title": "🤝 ¿Necesitas más ayuda?",
+      "title": "¿Necesitas más ayuda?",
       "ideaTitle": "Título",
       "ideaTitlePlaceholder": "Resumen breve de tu problema",
       "details": "Detalles",
@@ -308,7 +308,7 @@
       "contact": "Correo / Contacto (opcional)",
       "contactPlaceholder": "¿Cómo podemos contactarte?",
       "photo": "Foto (opcional)",
-      "uploadImage": "📷 Subir imagen",
+      "uploadImage": "Subir imagen",
       "sendBtn": "Enviar solicitud",
       "sending": "Enviando...",
       "fillRequired": "Por favor completa todos los campos requeridos.",
@@ -424,7 +424,7 @@
     "content": "Contenido",
     "contentPlaceholder": "Escribe tu publicación...",
     "photo": "Foto (opcional)",
-    "uploadImage": "📷 Subir imagen",
+    "uploadImage": "Subir imagen",
     "submit": "Enviar",
     "saving": "Guardando...",
     "fillRequired": "Por favor completa todos los campos requeridos.",
@@ -510,20 +510,21 @@
     },
     "why": {
       "title": "Por qué ANNYEONG es esencial para vivir en Corea",
-      "item1": "Respuestas reales de personas reales, no de IA",
-      "item2": "Información en tiempo real, no desactualizada como en redes sociales",
-      "item3": "Un servicio creado específicamente para extranjeros en Corea",
-      "item4": "Traducción en tiempo real + comunidad — 100% gratis",
-      "item5": "Sin respuesta en 10 min (9am–6pm) tras publicar = recompensa"
+      "item1": "Hacer amigos coreanos",
+      "item2": "Respuestas reales de personas reales, no de IA",
+      "item3": "Información en tiempo real, más rápida que las redes sociales",
+      "item4": "Comunícate también con coreanos gracias a la traducción en tiempo real",
+      "item5": "Adáptate a la vida en Corea de manera más rápida y precisa"
     },
     "language": {
       "title": "Idioma y Traducción",
-      "item1": "Tras registrarte, todos los posts y comentarios se traducen en tiempo real",
-      "item2": "Recibe notificaciones push para estar al tanto más rápido",
-      "item3": "Empieza una mejor vida en Corea en solo 30 segundos"
+      "item1": "Todos los posts y comentarios se traducen en tiempo real",
+      "item2": "Lee y entiende fácilmente en tu propio idioma",
+      "item3": "Habla con coreanos sin barreras de idioma",
+      "item4": "Consulta el texto original para mayor precisión"
     },
     "app": {
-      "title": "Úsalo como una app",
+      "title": "❗️Úsalo como una app❗️",
       "item1": "Agrégalo a tu pantalla de inicio y úsalo como una app nativa",
       "item2": "Acceso más rápido y conveniente",
       "installBtn": "Cómo instalar"

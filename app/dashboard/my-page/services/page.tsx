@@ -1,13 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
 import '@/lib/i18n'
 import ConsultModal from '@/components/common/ConsultModal'
 
 export default function ServicesPage() {
+  const router = useRouter()
   const { t } = useTranslation('common')
   const [consultPurpose, setConsultPurpose] = useState<string | null>(null)
+
+  useEffect(() => {
+    document.querySelector('main')?.scrollTo(0, 0)
+  }, [])
 
   const services = [
     { icon: '🎯', title: t('services.vipPackage.title'), description: t('services.vipPackage.desc'), purpose: null },
@@ -21,10 +27,11 @@ export default function ServicesPage() {
 
   return (
     <div className="max-w-6xl space-y-6">
-      <div>
-        <h1 className="text-4xl font-bold mb-2">{t('services.title')}</h1>
-        <p className="text-gray-600">{t('services.subtitle')}</p>
+      <div className="flex items-center gap-3 mt-4">
+        <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-800 transition text-xl">‹</button>
+        <h1 className="text-2xl font-bold">{t('services.title')}</h1>
       </div>
+      <p className="text-gray-600">{t('services.subtitle')}</p>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {services.map((service, idx) => (
