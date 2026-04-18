@@ -31,16 +31,17 @@ export async function POST(req: NextRequest) {
     }
 
     const field = room.user_a === user.id ? 'user_a_hidden' : 'user_b_hidden';
+    const hiddenAtField = room.user_a === user.id ? 'user_a_hidden_at' : 'user_b_hidden_at';
     const { error } = await admin
       .from('chat_room')
-      .update({ [field]: true })
+      .update({ [field]: true, [hiddenAtField]: new Date().toISOString() })
       .eq('id', roomId);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   } else if (roomType === 'gather') {
     const { error } = await admin
       .from('gather_chat_member')
-      .update({ hidden: true })
+      .update({ hidden: true, hidden_at: new Date().toISOString() })
       .eq('room_id', roomId)
       .eq('user_id', user.id);
 

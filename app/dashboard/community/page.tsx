@@ -197,7 +197,7 @@ export default function CommunityPage() {
     <div className="max-w-4xl space-y-6">
       {/* Title + Search Icon */}
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-bold">{t('community.title')}</h1>
+        <h1 className="text-2xl font-bold mt-4 text-gray-800">{t('community.title')}</h1>
       </div>
 
       {/* Category Tabs */}
@@ -266,7 +266,7 @@ export default function CommunityPage() {
 
       {/* FAB */}
       <button
-        className="fixed bottom-24 md:bottom-8 right-6 md:right-8 z-50 bg-[#9DB8A0] text-white px-5 py-3 rounded-full font-semibold shadow-lg hover:opacity-90 transition flex items-center gap-2"
+        className="fixed bottom-26 md:bottom-8 right-6 md:right-8 z-50 bg-[#9DB8A0] text-white px-5 py-3 rounded-full font-semibold shadow-lg hover:opacity-90 transition flex items-center gap-2"
         onClick={handleWriteClick}
       >
         + {t('community.writePost')}

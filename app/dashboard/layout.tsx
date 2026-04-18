@@ -39,7 +39,7 @@ export default function DashboardLayout({
 
       const { data: directRooms } = await supabase
         .from('chat_room')
-        .select('id, user_a, user_b, user_a_hidden, user_b_hidden')
+        .select('id, user_a, user_b, user_a_hidden, user_b_hidden, user_a_hidden_at, user_b_hidden_at')
         .or(`user_a.eq.${uid},user_b.eq.${uid}`)
       const visibleDirect = (directRooms || []).filter((r: any) =>
         (r.user_a === uid && !r.user_a_hidden) ||
@@ -57,15 +57,54 @@ export default function DashboardLayout({
       let count = 0
       await Promise.all(visibleDirect.map(async (r: any) => {
         const lastRead = directReadMap[r.id] ?? null
+        const myHiddenAt = (r.user_a === uid ? r.user_a_hidden_at : r.user_b_hidden_at) ?? null
+        const baseline = myHiddenAt && lastRead
+          ? (new Date(myHiddenAt) > new Date(lastRead) ? myHiddenAt : lastRead)
+          : (myHiddenAt || lastRead)
         let query = supabase
           .from('chat_message')
           .select('id', { count: 'exact', head: true })
           .eq('room_id', r.id)
           .neq('sender_id', uid)
-        if (lastRead) query = query.gt('created_at', lastRead)
+        if (baseline) query = query.gt('created_at', baseline)
         const { count: c } = await query
         count += c ?? 0
       }))
+
+      // ── Gather 채팅 unread ──
+      const { data: gatherMembers } = await supabase
+        .from('gather_chat_member')
+        .select('room_id, hidden_at')
+        .eq('user_id', uid)
+        .eq('hidden', false)
+      const visibleGatherRoomIds: string[] = (gatherMembers || []).map((m: any) => m.room_id)
+      if (visibleGatherRoomIds.length > 0) {
+        const { data: gatherReadStates } = await supabase
+          .from('chat_room_read_state')
+          .select('room_id, last_read_at')
+          .eq('user_id', uid)
+          .eq('room_type', 'gather')
+          .in('room_id', visibleGatherRoomIds)
+        const gatherReadMap: Record<string, string> = {}
+        for (const rs of gatherReadStates || []) gatherReadMap[rs.room_id] = rs.last_read_at
+        const memberHiddenAtMap: Record<string, string | null> = {}
+        for (const m of gatherMembers || []) memberHiddenAtMap[m.room_id] = m.hidden_at ?? null
+        await Promise.all(visibleGatherRoomIds.map(async (rId: string) => {
+          const lastRead = gatherReadMap[rId] ?? null
+          const hiddenAt = memberHiddenAtMap[rId] ?? null
+          const baseline = hiddenAt && lastRead
+            ? (new Date(hiddenAt) > new Date(lastRead) ? hiddenAt : lastRead)
+            : (hiddenAt || lastRead)
+          let query = supabase
+            .from('gather_chat_message')
+            .select('id', { count: 'exact', head: true })
+            .eq('room_id', rId)
+            .neq('sender_id', uid)
+          if (baseline) query = query.gt('created_at', baseline)
+          const { count: c } = await query
+          count += c ?? 0
+        }))
+      }
 
       setTotalUnread(count)
     }

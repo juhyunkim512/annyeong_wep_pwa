@@ -35,15 +35,84 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
   const [category, setCategory] = useState('');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [locationTab, setLocationTab] = useState<'quick' | 'map'>('quick');
   const [selectedQuickLocation, setSelectedQuickLocation] = useState('');
   const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number; label: string } | null>(null);
-  const [timeOption, setTimeOption] = useState<'30' | '60' | '120' | 'custom'>('30');
-  const [customTime, setCustomTime] = useState('');
+  const [showFullscreenMap, setShowFullscreenMap] = useState(false);
   const [maxParticipants, setMaxParticipants] = useState(4);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showFullscreenMap, setShowFullscreenMap] = useState(false);
+
+  // 날짜/시간 상태 (한국 시간 기준)
+  const getNowKST = () => {
+    const now = new Date();
+    // UTC ms + 9시간 = KST
+    const utcMs = now.getTime() + now.getTimezoneOffset() * 60 * 1000;
+    return new Date(utcMs + 9 * 60 * 60 * 1000);
+  };
+
+  const nowKST = getNowKST();
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    const d = getNowKST();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedHour, setSelectedHour] = useState(() => {
+    const m = getNowKST().getMinutes();
+    const h = getNowKST().getHours();
+    return m >= 50 ? (h + 1) % 24 : h;
+  });
+  const [selectedMinute, setSelectedMinute] = useState(() => {
+    const m = getNowKST().getMinutes();
+    if (m < 10) return 10;
+    if (m < 20) return 20;
+    if (m < 30) return 30;
+    if (m < 40) return 40;
+    if (m < 50) return 50;
+    return 0;
+  });
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const d = getNowKST();
+    return { year: d.getFullYear(), month: d.getMonth() };
+  });
+
+  const formatDateLabel = (d: Date) => {
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    return `${d.getMonth() + 1}월 ${d.getDate()}일 ${days[d.getDay()]}요일`;
+  };
+  const formatTimeLabel = (h: number, m: number) => {
+    const ampm = h < 12 ? '오전' : '오후';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return `${ampm} ${h12}:${String(m).padStart(2, '0')}`;
+  };
+
+  // 달력 계산
+  const todayKST = new Date(nowKST);
+  todayKST.setHours(0, 0, 0, 0);
+
+  const calendarDays = (() => {
+    const { year, month } = calendarMonth;
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells: (Date | null)[] = Array(firstDay).fill(null);
+    for (let i = 1; i <= daysInMonth; i++) cells.push(new Date(year, month, i));
+    return cells;
+  })();
+
+  const isPastDate = (d: Date) => d < todayKST;
+
+  // 시간이 과거인지 확인 (선택 날짜가 오늘이면 현재 시각 기준)
+  const isPastTime = (h: number, m: number) => {
+    const selDate = new Date(selectedDate);
+    selDate.setHours(0, 0, 0, 0);
+    if (selDate.getTime() > todayKST.getTime()) return false;
+    const nowH = nowKST.getHours();
+    const nowM = nowKST.getMinutes();
+    return h < nowH || (h === nowH && m <= nowM);
+  };
+
+  const minuteOptions = [0, 10, 20, 30, 40, 50];
 
   const handleMapSelect = useCallback((lat: number, lng: number, label: string) => {
     setMapLocation({ lat, lng, label });
@@ -55,25 +124,10 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
   }, []);
 
   const getMeetAt = (): string => {
-    const now = new Date();
-    switch (timeOption) {
-      case '30':
-        return new Date(now.getTime() + 30 * 60 * 1000).toISOString();
-      case '60':
-        return new Date(now.getTime() + 60 * 60 * 1000).toISOString();
-      case '120':
-        return new Date(now.getTime() + 120 * 60 * 1000).toISOString();
-      case 'custom':
-        if (!customTime) return new Date(now.getTime() + 30 * 60 * 1000).toISOString();
-        // customTime은 "HH:mm" 형태
-        const [h, m] = customTime.split(':').map(Number);
-        const d = new Date();
-        d.setHours(h, m, 0, 0);
-        if (d < now) d.setDate(d.getDate() + 1); // 이미 지난 시간이면 내일
-        return d.toISOString();
-      default:
-        return new Date(now.getTime() + 30 * 60 * 1000).toISOString();
-    }
+    // selectedDate는 KST 자정 기준 로컬 Date이므로 시/분 세팅 후 ISO 변환
+    const d = new Date(selectedDate);
+    d.setHours(selectedHour, selectedMinute, 0, 0);
+    return d.toISOString();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,11 +136,15 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
 
     if (!category || !title.trim()) { setError(t('gather.write.fillRequired')); return; }
 
-    const hasLocation = locationTab === 'quick'
-      ? !!selectedQuickLocation
-      : !!mapLocation;
+    const hasLocation = !!selectedQuickLocation || !!mapLocation;
     if (!hasLocation) { setError(t('gather.write.selectLocation')); return; }
-    if (timeOption === 'custom' && !customTime) { setError(t('gather.write.fillRequired')); return; }
+
+    // 과거 시간 유효성 검사
+    const meetAt = getMeetAt();
+    if (new Date(meetAt).getTime() <= getNowKST().getTime()) {
+      setError('과거 또는 현재 시간은 선택할 수 없어요.');
+      return;
+    }
 
     setLoading(true);
 
@@ -106,6 +164,7 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
     if (profile?.uselanguage) uselanguage = profile.uselanguage;
 
     const quickLoc = QUICK_LOCATIONS.find((l) => l.key === selectedQuickLocation);
+    const locationTab = selectedQuickLocation ? 'quick' : 'map';
 
     const body = {
       title: title.trim(),
@@ -117,7 +176,7 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
         : mapLocation!.label,
       lat: locationTab === 'quick' ? quickLoc?.lat : mapLocation?.lat,
       lng: locationTab === 'quick' ? quickLoc?.lng : mapLocation?.lng,
-      meet_at: getMeetAt(),
+      meet_at: meetAt,
       max_participants: maxParticipants,
       language: uselanguage,
     };
@@ -143,11 +202,11 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
       setCategory('');
       setTitle('');
       setContent('');
-      setLocationTab('quick');
       setSelectedQuickLocation('');
       setMapLocation(null);
-      setTimeOption('30');
-      setCustomTime('');
+      setSelectedDate(new Date(nowKST.getFullYear(), nowKST.getMonth(), nowKST.getDate()));
+      setSelectedHour(nowKST.getHours());
+      setSelectedMinute(nowKST.getMinutes() >= 50 ? 0 : Math.ceil((nowKST.getMinutes() + 1) / 10) * 10);
       setMaxParticipants(4);
       setLoading(false);
       onClose();
@@ -161,9 +220,137 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
 
   return (
     <>
+    {/* 날짜 바텀시트 */}
+    {showDatePicker && (
+      <div className="fixed inset-0 z-[200] flex flex-col justify-end">
+        <div className="absolute inset-0 bg-black/40" onClick={() => setShowDatePicker(false)} />
+        <div className="relative bg-white rounded-t-2xl px-5 pt-4 pb-8">
+          <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
+          {/* 달력 헤더 */}
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold">{calendarMonth.year}년 {calendarMonth.month + 1}월</span>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setCalendarMonth((prev) => { const d = new Date(prev.year, prev.month - 1); return { year: d.getFullYear(), month: d.getMonth() }; })} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">‹</button>
+              <button type="button" onClick={() => setCalendarMonth((prev) => { const d = new Date(prev.year, prev.month + 1); return { year: d.getFullYear(), month: d.getMonth() }; })} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">›</button>
+            </div>
+          </div>
+          {/* 요일 */}
+          <div className="grid grid-cols-7 text-center mb-1">
+            {['일','월','화','수','목','금','토'].map((d) => <span key={d} className="text-xs text-gray-400 py-1">{d}</span>)}
+          </div>
+          {/* 날짜 */}
+          <div className="grid grid-cols-7 text-center gap-y-1">
+            {calendarDays.map((d, idx) => {
+              if (!d) return <span key={idx} />;
+              const past = isPastDate(d);
+              const selected = d.toDateString() === selectedDate.toDateString();
+              const isToday = d.toDateString() === todayKST.toDateString();
+              return (
+                <button key={idx} type="button" disabled={past}
+                  onClick={() => { setSelectedDate(d); setShowDatePicker(false); }}
+                  className={`mx-auto w-9 h-9 rounded-full text-sm flex items-center justify-center transition
+                    ${past ? 'text-gray-300 cursor-not-allowed' : ''}
+                    ${selected ? 'bg-[#9DB8A0] text-white font-bold' : ''}
+                    ${!selected && isToday ? 'border border-[#9DB8A0] text-[#9DB8A0] font-semibold' : ''}
+                    ${!selected && !past && !isToday ? 'hover:bg-gray-100 text-gray-800' : ''}
+                  `}>
+                  {d.getDate()}
+                </button>
+              );
+            })}
+          </div>
+          <button type="button" onClick={() => setShowDatePicker(false)}
+            className="mt-5 w-full py-3 bg-[#9DB8A0] text-white rounded-xl text-sm font-semibold">
+            확인
+          </button>
+        </div>
+      </div>
+    )}
+
+    {/* 시간 바텀시트 */}
+    {showTimePicker && (
+      <div className="fixed inset-0 z-[200] flex flex-col justify-end">
+        <div className="absolute inset-0 bg-black/40" onClick={() => setShowTimePicker(false)} />
+        <div className="relative bg-white rounded-t-2xl px-5 pt-4 pb-8">
+          <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
+          <div className="flex rounded-xl border border-gray-200 overflow-hidden">
+            {/* 오전/오후 */}
+            <div className="flex flex-col flex-1 border-r border-gray-200 max-h-52 overflow-y-auto">
+              {['오전', '오후'].map((ap, i) => {
+                const isSelected = (selectedHour < 12) === (i === 0);
+                return (
+                  <button key={ap} type="button"
+                    onClick={() => {
+                      let newHour = selectedHour;
+                      if (i === 0 && selectedHour >= 12) newHour = selectedHour - 12;
+                      if (i === 1 && selectedHour < 12) newHour = selectedHour + 12;
+                      // 전환 후 과거 시간이면 현재 KST 시각에 맞게 snap
+                      const kst = getNowKST();
+                      const selD = new Date(selectedDate);
+                      selD.setHours(0, 0, 0, 0);
+                      const todayD = new Date(kst);
+                      todayD.setHours(0, 0, 0, 0);
+                      if (selD.getTime() === todayD.getTime()) {
+                        const nowH = kst.getHours();
+                        const nowM = kst.getMinutes();
+                        if (newHour < nowH || (newHour === nowH && selectedMinute <= nowM)) {
+                          // 가장 가까운 미래 분으로 snap
+                          const snapM = nowM < 50 ? Math.ceil((nowM + 1) / 10) * 10 : 0;
+                          const snapH = nowM < 50 ? nowH : nowH + 1;
+                          setSelectedHour(snapH % 24);
+                          setSelectedMinute(snapM);
+                          return;
+                        }
+                      }
+                      setSelectedHour(newHour);
+                    }}
+                    className={`py-4 text-sm text-center transition ${isSelected ? 'bg-[#f0f5f1] text-[#6b8f6e] font-bold' : 'text-gray-500'}`}>
+                    {ap}
+                  </button>
+                );
+              })}
+            </div>
+            {/* 시 1~12 */}
+            <div className="flex flex-col flex-1 border-r border-gray-200 max-h-52 overflow-y-auto">
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((h12) => {
+                const h24 = selectedHour < 12 ? h12 % 12 : (h12 % 12) + 12;
+                const past = isPastTime(h24, selectedMinute);
+                const isSelected = selectedHour % 12 === h12 % 12;
+                return (
+                  <button key={h12} type="button" disabled={past} onClick={() => setSelectedHour(h24)}
+                    className={`py-3 text-sm text-center transition cursor-pointer
+                      ${past ? 'text-gray-300 cursor-not-allowed' : isSelected ? 'bg-[#f0f5f1] text-[#6b8f6e] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}>
+                    {h12}
+                  </button>
+                );
+              })}
+            </div>
+            {/* 분 */}
+            <div className="flex flex-col flex-1 max-h-52 overflow-y-auto">
+              {minuteOptions.map((m) => {
+                const past = isPastTime(selectedHour, m);
+                const isSelected = selectedMinute === m;
+                return (
+                  <button key={m} type="button" disabled={past} onClick={() => setSelectedMinute(m)}
+                    className={`py-3 text-sm text-center transition
+                      ${past ? 'text-gray-300 cursor-not-allowed' : isSelected ? 'bg-[#f0f5f1] text-[#6b8f6e] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}>
+                    {String(m).padStart(2, '0')}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <button type="button" onClick={() => setShowTimePicker(false)}
+            className="mt-5 w-full py-3 bg-[#9DB8A0] text-white rounded-xl text-sm font-semibold">
+            확인
+          </button>
+        </div>
+      </div>
+    )}
+
     {/* 전체화면 지도 오버레이 */}
     {showFullscreenMap && (
-      <div className="fixed inset-0 z-[200] bg-white flex flex-col">
+      <div className="fixed inset-0 z-[300] bg-white flex flex-col">
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 shrink-0">
           <button
             type="button"
@@ -248,112 +435,71 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
             />
           </div>
 
-          {/* 위치 선택 */}
+          {/* 날짜 선택 */}
           <div>
-            <label className="block text-sm font-semibold mb-2">{t('gather.write.location')}</label>
-            <div className="flex gap-2 mb-3">
+            <div className="flex items-center justify-between py-3 border-b border-gray-100">
+              <span className="text-sm font-semibold text-gray-700">날짜</span>
               <button
                 type="button"
-                onClick={() => setLocationTab('quick')}
-                className={`flex-1 py-1.5 text-sm rounded-lg border transition ${
-                  locationTab === 'quick'
-                    ? 'bg-[#9DB8A0] text-white border-[#9DB8A0]'
-                    : 'bg-white text-gray-600 border-gray-300'
-                }`}
+                onClick={() => { setShowDatePicker(true); setShowTimePicker(false); }}
+                className="flex items-center gap-1 text-sm text-gray-800 font-medium"
               >
-                {t('gather.write.quickLocation')}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setLocationTab('map'); setShowFullscreenMap(true); }}
-                className={`flex-1 py-1.5 text-sm rounded-lg border transition ${
-                  locationTab === 'map'
-                    ? 'bg-[#9DB8A0] text-white border-[#9DB8A0]'
-                    : 'bg-white text-gray-600 border-gray-300'
-                }`}
-              >
-                {t('gather.write.mapLocation')}
+                {formatDateLabel(selectedDate)}
+                <span className="text-gray-400 text-base leading-none">⌵</span>
               </button>
             </div>
-
-            {locationTab === 'quick' ? (
-              <div className="flex flex-wrap gap-2">
-                {QUICK_LOCATIONS.map((loc) => (
-                  <button
-                    key={loc.key}
-                    type="button"
-                    onClick={() => setSelectedQuickLocation(loc.key)}
-                    className={`px-3 py-1.5 rounded-full text-sm border transition ${
-                      selectedQuickLocation === loc.key
-                        ? 'bg-[#f0f5f1] text-[#6b8f6e] border-[#9DB8A0] font-medium'
-                        : 'bg-white text-gray-600 border-gray-300 hover:border-[#9DB8A0]'
-                    }`}
-                  >
-                    📍 {t(`gather.locations.${loc.key}`)}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div>
-                {mapLocation ? (
-                  <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200">
-                    <p className="text-sm text-gray-700 flex-1 truncate">📍 {mapLocation.label}</p>
-                    <button
-                      type="button"
-                      onClick={() => setShowFullscreenMap(true)}
-                      className="text-xs text-[#9DB8A0] border border-[#9DB8A0] px-2 py-1 rounded-lg shrink-0"
-                    >
-                      변경
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowFullscreenMap(true)}
-                    className="w-full py-6 bg-gray-50 border border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-[#9DB8A0] hover:text-[#9DB8A0] transition"
-                  >
-                    🗺️ {t('gather.write.tapToSelectLocation')}
-                  </button>
-                )}
-              </div>
-            )}
           </div>
 
           {/* 시간 선택 */}
           <div>
-            <label className="block text-sm font-semibold mb-2">{t('gather.write.meetTime')}</label>
-            <div className="flex flex-wrap gap-2">
-              {(['30', '60', '120', 'custom'] as const).map((opt) => {
-                const labels: Record<string, string> = {
-                  '30': t('gather.write.meetTime30'),
-                  '60': t('gather.write.meetTime60'),
-                  '120': t('gather.write.meetTime120'),
-                  custom: t('gather.write.meetTimeCustom'),
-                };
-                return (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => setTimeOption(opt)}
-                    className={`px-3 py-1.5 rounded-full text-sm border transition ${
-                      timeOption === opt
-                        ? 'bg-[#9DB8A0] text-white border-[#9DB8A0]'
-                        : 'bg-white text-gray-600 border-gray-300 hover:border-[#9DB8A0]'
-                    }`}
-                  >
-                    {labels[opt]}
-                  </button>
-                );
-              })}
+            <div className="flex items-center justify-between py-3 border-b border-gray-100">
+              <span className="text-sm font-semibold text-gray-700">시간</span>
+              <button
+                type="button"
+                onClick={() => { setShowTimePicker(true); setShowDatePicker(false); }}
+                className="flex items-center gap-1 text-sm text-gray-800 font-medium"
+              >
+                {formatTimeLabel(selectedHour, selectedMinute)}
+                <span className="text-gray-400 text-base leading-none">⌵</span>
+              </button>
             </div>
-            {timeOption === 'custom' && (
-              <input
-                type="time"
-                value={customTime}
-                onChange={(e) => setCustomTime(e.target.value)}
-                className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9DB8A0] text-sm"
-              />
-            )}
+          </div>
+
+          {/* 위치 선택 */}
+          <div>
+            <div className="flex items-center justify-between py-3 border-b border-gray-100">
+              <span className="text-sm font-semibold text-gray-700">위치선택</span>
+              <button
+                type="button"
+                onClick={() => setShowFullscreenMap(true)}
+                className="flex items-center gap-1 text-sm text-gray-500"
+              >
+                직접선택
+                <span className="text-gray-400">›</span>
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {QUICK_LOCATIONS.map((loc) => (
+                <button
+                  key={loc.key}
+                  type="button"
+                  onClick={() => { setSelectedQuickLocation(loc.key); setMapLocation(null); }}
+                  className={`px-3 py-1.5 rounded-full text-sm border transition ${
+                    selectedQuickLocation === loc.key
+                      ? 'bg-[#f0f5f1] text-[#6b8f6e] border-[#9DB8A0] font-medium'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-[#9DB8A0]'
+                  }`}
+                >
+                  📍 {t(`gather.locations.${loc.key}`)}
+                </button>
+              ))}
+              {mapLocation && (
+                <div className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm bg-[#f0f5f1] text-[#6b8f6e] border border-[#9DB8A0] font-medium">
+                  📍 {mapLocation.label}
+                  <button type="button" onClick={() => setMapLocation(null)} className="ml-1 text-gray-400 text-xs">✕</button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 최대 인원 */}

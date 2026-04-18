@@ -66,7 +66,7 @@ export default function ChatListPage() {
       // ── 1:1 채팅방 ──
       const { data: directData } = await supabase
         .from('chat_room')
-        .select('id, user_a, user_b, last_message, last_message_at, user_a_hidden, user_b_hidden')
+        .select('id, user_a, user_b, last_message, last_message_at, user_a_hidden, user_b_hidden, user_a_hidden_at, user_b_hidden_at')
         .or(`user_a.eq.${uid},user_b.eq.${uid}`)
         .order('last_message_at', { ascending: false, nullsFirst: false });
 
@@ -103,12 +103,16 @@ export default function ChatListPage() {
         visible.map(async (r) => {
           const otherId = r.user_a === uid ? r.user_b : r.user_a;
           const lastRead = readStateMap[r.id] ?? null;
+          const myHiddenAt = (r.user_a === uid ? r.user_a_hidden_at : r.user_b_hidden_at) ?? null;
+          const baseline = myHiddenAt && lastRead
+            ? (new Date(myHiddenAt) > new Date(lastRead) ? myHiddenAt : lastRead)
+            : (myHiddenAt || lastRead);
           let query = supabase
             .from('chat_message')
             .select('id', { count: 'exact', head: true })
             .eq('room_id', r.id)
             .neq('sender_id', uid);
-          if (lastRead) query = query.gt('created_at', lastRead);
+          if (baseline) query = query.gt('created_at', baseline);
           const { count } = await query;
           unreadCountMap[r.id] = count ?? 0;
           return otherId;
@@ -223,6 +227,32 @@ export default function ChatListPage() {
                 (b.last_message_at ?? '').localeCompare(a.last_message_at ?? '')
               );
             }
+            // 방이 숨김 해제됨 (삭제 후 상대방 메시지 수신) → 목록에 다시 추가
+            const otherId = updated.user_a === myId ? updated.user_b : updated.user_a;
+            supabase
+              .from('profile')
+              .select('id, nickname, flag, image_url')
+              .eq('id', otherId)
+              .maybeSingle()
+              .then(({ data: profile }) => {
+                setRooms((currentRooms) => {
+                  if (currentRooms.some((r) => r.id === updated.id)) return currentRooms;
+                  const newRoom: ChatRoom = {
+                    id: updated.id,
+                    roomType: 'direct',
+                    other_user_id: otherId,
+                    other_nickname: profile?.nickname ?? t('common.unknown'),
+                    other_flag: profile?.flag ?? null,
+                    other_image_url: profile?.image_url ?? null,
+                    last_message: updated.last_message,
+                    last_message_at: updated.last_message_at,
+                    unread_count: 1,
+                  };
+                  return [newRoom, ...currentRooms].sort((a, b) =>
+                    (b.last_message_at ?? '').localeCompare(a.last_message_at ?? '')
+                  );
+                });
+              });
             return prev;
           });
         }
@@ -262,19 +292,61 @@ export default function ChatListPage() {
         { event: 'INSERT', schema: 'public', table: 'chat_message' },
         (payload) => {
           const msg = payload.new as { room_id: string; sender_id: string; content: string; created_at: string };
-          if (msg.sender_id === myId) return; // 내가 보낸 메시지는 unread 아님
+          if (msg.sender_id === myId) return;
+
           setRooms((prev) => {
             const idx = prev.findIndex((r) => r.id === msg.room_id);
-            if (idx === -1) return prev;
-            const updated = {
-              ...prev[idx],
-              last_message: msg.content,
-              last_message_at: msg.created_at,
-              unread_count: prev[idx].unread_count + 1,
-            };
-            return [updated, ...prev.filter((r) => r.id !== msg.room_id)];
+            if (idx !== -1) {
+              const updated = {
+                ...prev[idx],
+                last_message: msg.content,
+                last_message_at: msg.created_at,
+                unread_count: prev[idx].unread_count + 1,
+              };
+              return [updated, ...prev.filter((r) => r.id !== msg.room_id)];
+            }
+
+            // 방이 목록에 없음 → 숨겨진 방에 메시지 도착 (재등장)
+            // hidden 체크 제거: INSERT와 unhide UPDATE 사이 race condition 방지
+            // 내가 참가자인지만 확인하면 충분
+            supabase
+              .from('chat_room')
+              .select('id, user_a, user_b, last_message, last_message_at')
+              .eq('id', msg.room_id)
+              .maybeSingle()
+              .then(({ data: room }) => {
+                if (!room || !myId) return;
+                const isParticipant = room.user_a === myId || room.user_b === myId;
+                if (!isParticipant) return;
+                const otherId = room.user_a === myId ? room.user_b : room.user_a;
+                supabase
+                  .from('profile')
+                  .select('id, nickname, flag, image_url')
+                  .eq('id', otherId)
+                  .maybeSingle()
+                  .then(({ data: profile }) => {
+                    setRooms((currentRooms) => {
+                      if (currentRooms.some((r) => r.id === msg.room_id)) return currentRooms;
+                      const newRoom: ChatRoom = {
+                        id: msg.room_id,
+                        roomType: 'direct',
+                        other_user_id: otherId,
+                        other_nickname: profile?.nickname ?? t('common.unknown'),
+                        other_flag: profile?.flag ?? null,
+                        other_image_url: profile?.image_url ?? null,
+                        last_message: room.last_message ?? msg.content,
+                        last_message_at: room.last_message_at ?? msg.created_at,
+                        unread_count: 1,
+                      };
+                      return [newRoom, ...currentRooms].sort((a, b) =>
+                        (b.last_message_at ?? '').localeCompare(a.last_message_at ?? '')
+                      );
+                    });
+                    window.dispatchEvent(new CustomEvent('unreadUpdate'));
+                  });
+              });
+            return prev;
           });
-          // 탭 badge 즉시 증가
           window.dispatchEvent(new CustomEvent('unreadUpdate'));
         }
       )
@@ -293,6 +365,35 @@ export default function ChatListPage() {
           });
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'gather_chat_member', filter: `user_id=eq.${myId}` },
+        async (payload) => {
+          const updated = payload.new as { room_id: string; hidden: boolean };
+          if (updated.hidden !== false) return;
+          const { data: gatherRoom } = await supabase
+            .from('gather_chat_room')
+            .select('id, title, last_message, last_message_at')
+            .eq('id', updated.room_id)
+            .maybeSingle();
+          if (!gatherRoom) return;
+          setRooms((prev) => {
+            if (prev.some((r) => r.id === gatherRoom.id)) return prev;
+            const newRoom: ChatRoom = {
+              id: gatherRoom.id,
+              roomType: 'gather',
+              gather_title: gatherRoom.title,
+              last_message: gatherRoom.last_message,
+              last_message_at: gatherRoom.last_message_at,
+              unread_count: 1,
+            };
+            return [newRoom, ...prev].sort((a, b) =>
+              (b.last_message_at ?? '').localeCompare(a.last_message_at ?? '')
+            );
+          });
+          window.dispatchEvent(new CustomEvent('unreadUpdate'));
+        }
+      )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [myId, t]);
@@ -307,9 +408,8 @@ export default function ChatListPage() {
   };
 
   return (
-    <div className="max-w-lg mx-auto py-6">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">{t('chat.title')}</h1>
-
+    <div className="max-w-lg mx-auto py-3">
+      <h1 className="text-2xl font-bold mt-1 text-gray-800">{t('chat.title')}</h1>
       {loading ? (
         <div className="text-center py-12 text-gray-400">{t('common.loading')}</div>
       ) : !myId ? (
@@ -327,7 +427,7 @@ export default function ChatListPage() {
         </div>
       ) : rooms.length === 0 ? (
         <div className="text-center py-16">
-          <div className="text-5xl mb-4">✉️</div>
+          <div className="text-5xl mb-3">✉️</div>
           <p className="text-gray-600 font-medium mb-1">{t('chat.empty')}</p>
           <p className="text-sm text-gray-400">{t('chat.emptyDesc')}</p>
         </div>

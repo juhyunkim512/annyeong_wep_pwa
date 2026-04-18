@@ -8,6 +8,9 @@ import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
 import { normalizeLang } from '@/lib/utils/normalizeLang';
 import { batchTranslate } from '@/lib/utils/batchTranslate';
+import UserProfileModal from '@/components/common/UserProfileModal';
+
+
 
 interface Participant {
   user_id: string;
@@ -43,6 +46,8 @@ export default function GatherDetailModal({
   onChanged,
 }: GatherDetailModalProps) {
   const { t } = useTranslation('common');
+  const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const router = useRouter();
   const [post, setPost] = useState<any>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -53,6 +58,7 @@ export default function GatherDetailModal({
   const [confirming, setConfirming] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [translatedPost, setTranslatedPost] = useState<{
+    
     title: string;
     content: string | null;
     locationLabel: string;
@@ -159,6 +165,11 @@ export default function GatherDetailModal({
     const d = new Date(post.meet_at);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+  const handleParticipantClick = (userId: string) => {
+  setSelectedProfileUserId(userId);
+  setIsProfileOpen(true);
+  };
+
 
   const handleJoin = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -237,7 +248,7 @@ export default function GatherDetailModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-end sm:items-center justify-center z-50" onClick={onClose}>
       <div
         className="bg-white rounded-t-2xl sm:rounded-2xl max-w-lg w-full p-5 relative max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
@@ -311,16 +322,22 @@ export default function GatherDetailModal({
                 <p className="text-sm font-semibold mb-2">{t('gather.detail.participants')} ({participants.length})</p>
                 <div className="flex flex-wrap gap-3">
                   {participants.map((p) => (
-                    <div key={p.user_id} className="flex items-center gap-2 bg-gray-50 rounded-full pl-1 pr-3 py-1">
+                    <button
+                      key={p.user_id}
+                      type="button"
+                      onClick={() => handleParticipantClick(p.user_id)}
+                      className="flex items-center gap-2 bg-gray-50 rounded-full pl-1 pr-3 py-1 hover:bg-gray-100 transition"
+                    >
                       <AvatarImage src={p.image_url} size={24} />
                       <span className="text-xs text-gray-700">
                         {p.flag && FLAG_EMOJI_MAP[p.flag] ? FLAG_EMOJI_MAP[p.flag] + ' ' : ''}
                         {p.nickname || 'Unknown'}
                       </span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
+              
             )}
 
             {/* 액션 버튼 */}
@@ -384,11 +401,30 @@ export default function GatherDetailModal({
                 >
                   {deleting ? '...' : t('gather.detail.delete')}
                 </button>
+                
               )}
+              
             </div>
           </div>
         )}
+        
+{selectedProfileUserId && (
+  <UserProfileModal
+    userId={selectedProfileUserId}
+    currentUserId={currentUserId}
+    isOpen={isProfileOpen}
+    onClose={() => {
+      setIsProfileOpen(false);
+      setSelectedProfileUserId(null);
+    }}
+    onLoginRequired={onRequireLogin}
+  />
+)}
+
+
+        
       </div>
     </div>
   );
 }
+

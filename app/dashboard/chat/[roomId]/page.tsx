@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import AvatarImage from '@/components/common/AvatarImage';
 import ReportModal from '@/components/common/ReportModal';
+import UserProfileModal from '@/components/common/UserProfileModal';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
 import { normalizeLang } from '@/lib/utils/normalizeLang';
@@ -74,10 +75,18 @@ export default function ChatRoomPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [otherLastReadAt, setOtherLastReadAt] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const translatingRef = useRef(false);
+  const readDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestSeenAtRef = useRef<string | null>(null);
+  const myIdRef = useRef<string | null>(null);
+  const accessTokenRef = useRef<string>('');
+  const otherIdRef = useRef<string | null>(null);
+  const myLangRef = useRef<string>('en');
 
   // ─── 번역 함수 ────────────────────────────
 
@@ -137,15 +146,19 @@ export default function ChatRoomPage() {
       const uid = session.user.id;
       setMyId(uid);
       setAccessToken(session.access_token);
+      myIdRef.current = uid;
+      accessTokenRef.current = session.access_token;
 
       const { data: room } = await supabase
         .from('chat_room')
-        .select('user_a, user_b')
+        .select('user_a, user_b, user_a_hidden_at, user_b_hidden_at')
         .eq('id', roomId)
         .maybeSingle();
       if (!room) { router.push('/dashboard/chat'); return; }
 
       const otherId = room.user_a === uid ? room.user_b : room.user_a;
+      const myHiddenAt: string | null = room.user_a === uid ? room.user_a_hidden_at : room.user_b_hidden_at;
+      otherIdRef.current = otherId;
 
       const [
         { data: myProfile },
@@ -153,29 +166,37 @@ export default function ChatRoomPage() {
         { data: blockRow },
         { data: myFollow },
         { data: theirFollow },
+        { data: otherReadState },
       ] = await Promise.all([
         supabase.from('profile').select('uselanguage').eq('id', uid).maybeSingle(),
         supabase.from('profile').select('id, nickname, flag, image_url').eq('id', otherId).maybeSingle(),
         supabase.from('user_block').select('id').eq('blocker_id', uid).eq('blocked_id', otherId).maybeSingle(),
         supabase.from('user_follow').select('id').eq('follower_id', uid).eq('following_id', otherId).maybeSingle(),
         supabase.from('user_follow').select('id').eq('follower_id', otherId).eq('following_id', uid).maybeSingle(),
+        supabase.from('chat_room_read_state').select('last_read_at').eq('room_id', roomId).eq('room_type', 'direct').eq('user_id', otherId).maybeSingle(),
       ]);
 
       const rawLang = myProfile?.uselanguage ?? 'english';
       const shortLang = normalizeLang(rawLang);
       setMyLangRaw(rawLang);
       setMyLang(shortLang);
+      myLangRef.current = shortLang;
       setOtherUser(profile ?? { id: otherId, nickname: t('common.unknown'), flag: null, image_url: null });
       setIsBlocked(!!blockRow);
       setIsFollowing(!!myFollow);
       setIsMutualFollow(!!myFollow && !!theirFollow);
+      setOtherLastReadAt(otherReadState?.last_read_at ?? null);
 
-      const { data: msgs } = await supabase
+      let msgQuery = supabase
         .from('chat_message')
         .select('id, sender_id, content, created_at, is_deleted, language, client_message_id')
         .eq('room_id', roomId)
         .order('created_at', { ascending: true })
         .limit(50);
+      if (myHiddenAt) {
+        msgQuery = msgQuery.gt('created_at', myHiddenAt);
+      }
+      const { data: msgs } = await msgQuery;
 
       const loaded = msgs ?? [];
       setMessages(loaded);
@@ -199,6 +220,28 @@ export default function ChatRoomPage() {
 
   useEffect(() => {
     if (!myId || !accessToken) return;
+
+    const flushReadState = (timestamp: string) => {
+      const uid = myIdRef.current;
+      if (!uid) return;
+      supabase.from('chat_room_read_state').upsert(
+        { room_id: roomId, room_type: 'direct', user_id: uid, last_read_at: timestamp },
+        { onConflict: 'room_id,room_type,user_id' }
+      ).then(() => window.dispatchEvent(new CustomEvent('unreadUpdate')));
+    };
+
+    const scheduleReadUpdate = (timestamp: string) => {
+      // 탭이 비활성이면 갱신 건너뜀
+      if (document.visibilityState !== 'visible') return;
+      if (!latestSeenAtRef.current || timestamp > latestSeenAtRef.current) {
+        latestSeenAtRef.current = timestamp;
+      }
+      if (readDebounceRef.current) clearTimeout(readDebounceRef.current);
+      readDebounceRef.current = setTimeout(() => {
+        if (latestSeenAtRef.current) flushReadState(latestSeenAtRef.current);
+      }, 600);
+    };
+
     const channel = supabase
       .channel(`chat_room_${roomId}`)
       .on(
@@ -218,14 +261,37 @@ export default function ChatRoomPage() {
             if (prev.some((m) => m.id === incoming.id)) return prev;
             return [...prev, incoming];
           });
-          if (incoming.sender_id !== myId) {
-            translateMessages([incoming], myLang, accessToken);
+          if (incoming.sender_id !== myIdRef.current) {
+            translateMessages([incoming], myLangRef.current, accessTokenRef.current);
+            // 상대 메시지 사진 시리얼 읽음 상태 debounce 갱신
+            scheduleReadUpdate(incoming.created_at);
           }
         }
       )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [roomId, myId, myLang, accessToken, translateMessages]);
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_room_read_state', filter: `room_id=eq.${roomId}` },
+        (payload) => {
+          const row = payload.new as { user_id: string; last_read_at: string };
+          if (row.user_id === otherIdRef.current) {
+            setOtherLastReadAt(row.last_read_at);
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('[DirectChat] Realtime status:', status, err ?? '');
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+      // unmount 시 flush
+      if (readDebounceRef.current) clearTimeout(readDebounceRef.current);
+      if (latestSeenAtRef.current) {
+        flushReadState(latestSeenAtRef.current);
+        latestSeenAtRef.current = null;
+      }
+    };
+  }, [roomId, myId, translateMessages]);
 
   // ─── 스크롤 하단 ──────────────────────────
 
@@ -283,6 +349,7 @@ export default function ChatRoomPage() {
         .from('chat_room')
         .update({ last_message: text, last_message_at: data.created_at })
         .eq('id', roomId);
+      // DB 트리거(trigger_auto_unhide_chat_room)가 last_message_at > hidden_at 시 자동 unhide 처리
     }
     inputRef.current?.focus();
   }, [input, myId, myLangRaw, roomId]);
@@ -341,7 +408,8 @@ export default function ChatRoomPage() {
       .from('chat_room').select('user_a, user_b').eq('id', roomId).maybeSingle();
     if (!room) return;
     const field = room.user_a === myId ? 'user_a_hidden' : 'user_b_hidden';
-    await supabase.from('chat_room').update({ [field]: true }).eq('id', roomId);
+    const fieldAt = room.user_a === myId ? 'user_a_hidden_at' : 'user_b_hidden_at';
+    await supabase.from('chat_room').update({ [field]: true, [fieldAt]: new Date().toISOString() }).eq('id', roomId);
     router.push('/dashboard/chat');
   }, [myId, roomId, router, t]);
 
@@ -375,7 +443,13 @@ export default function ChatRoomPage() {
           <>
             <AvatarImage src={otherUser.image_url} size={36} />
             <div className="flex-1">
-              <span className="font-semibold text-gray-800">{otherUser.nickname}</span>
+              <button
+                type="button"
+                onClick={() => setIsProfileOpen(true)}
+                className="font-semibold text-gray-800 hover:underline text-left"
+              >
+                {otherUser.nickname}
+              </button>
               {otherUser.flag && (
                 <span className="ml-1 text-base">{FLAG_EMOJI_MAP[otherUser.flag] ?? ''}</span>
               )}
@@ -477,7 +551,12 @@ export default function ChatRoomPage() {
                       </button>
                     )}
                     {!msg.pending && !msg.failed && (
-                      <span className="text-xs text-gray-400">{timeLabel(msg.created_at)}</span>
+                      <>
+                        {isMine && (!otherLastReadAt || msg.created_at > otherLastReadAt) && (
+                          <span className="text-[10px] text-[#9DB8A0] font-medium">1</span>
+                        )}
+                        <span className="text-xs text-gray-400">{timeLabel(msg.created_at)}</span>
+                      </>
                     )}
                   </div>
                 </div>
@@ -523,6 +602,15 @@ export default function ChatRoomPage() {
           onClose={() => setShowReport(false)}
           targetType="user"
           targetId={otherUser.id}
+        />
+      )}
+      {otherUser && (
+        <UserProfileModal
+          userId={otherUser.id}
+          currentUserId={myId}
+          isOpen={isProfileOpen}
+          onClose={() => setIsProfileOpen(false)}
+          onLoginRequired={() => {}}
         />
       )}
     </div>

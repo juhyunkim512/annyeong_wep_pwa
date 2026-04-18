@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import AvatarImage from '@/components/common/AvatarImage';
+import GatherDetailModal from '@/components/gather/GatherDetailModal';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
 import { normalizeLang } from '@/lib/utils/normalizeLang';
@@ -50,10 +51,19 @@ export default function GatherChatPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
+  const [isGatherDetailOpen, setIsGatherDetailOpen] = useState(false);
+  const [memberReadMap, setMemberReadMap] = useState<Record<string, string>>({});
+  const [totalMembers, setTotalMembers] = useState(0);
+
+  const [myProfile, setMyProfile] = useState<{ nickname: string | null; image_url: string | null; flag: string | null } | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const profileCacheRef = useRef<Record<string, { nickname: string | null; image_url: string | null; flag: string | null }>>({});
+  const pendingMsgIdRef = useRef<string | null>(null);
+  const myIdRef = useRef<string | null>(null);
+  const accessTokenRef = useRef<string>('');
+  const myLanguageRef = useRef<string>('ko');
 
   // ── 번역 ──
   const translateMessages = useCallback(async (
@@ -101,15 +111,21 @@ export default function GatherChatPage() {
 
     setMyId(session.user.id);
     setAccessToken(session.access_token);
+    myIdRef.current = session.user.id;
+    accessTokenRef.current = session.access_token;
 
-    // 유저 언어 조회
+    // 유저 언어 + 프로필 조회
     const { data: profile } = await supabase
       .from('profile')
-      .select('uselanguage')
+      .select('uselanguage, nickname, image_url, flag')
       .eq('id', session.user.id)
       .maybeSingle();
     const userLang = normalizeLang(profile?.uselanguage);
     setMyLanguage(userLang);
+    myLanguageRef.current = userLang;
+    const myProf = { nickname: profile?.nickname ?? null, image_url: profile?.image_url ?? null, flag: profile?.flag ?? null };
+    setMyProfile(myProf);
+    profileCacheRef.current[session.user.id] = myProf;
 
     try {
       const res = await fetch(`/api/gather/chat/${roomId}`, {
@@ -123,14 +139,31 @@ export default function GatherChatPage() {
 
       const data = await res.json();
       setRoom(data.room);
-      setMessages(data.messages || []);
+      const initialMsgs: ChatMessage[] = data.messages || [];
+      setMessages(initialMsgs);
+      // 초기 메시지에서 프로필 캐시 구성
+      for (const m of initialMsgs) {
+        if (m.sender_id && !profileCacheRef.current[m.sender_id]) {
+          profileCacheRef.current[m.sender_id] = { nickname: m.nickname, image_url: m.image_url, flag: m.flag };
+        }
+      }
+
+      // 멤버 수 + 읽음 상태 조회
+      const [{ count: memCount }, { data: memberReadStates }] = await Promise.all([
+        supabase.from('gather_chat_member').select('id', { count: 'exact', head: true }).eq('room_id', roomId),
+        supabase.from('chat_room_read_state').select('user_id, last_read_at').eq('room_id', roomId).eq('room_type', 'gather'),
+      ]);
+      setTotalMembers(memCount ?? 0);
+      const readMap: Record<string, string> = {};
+      for (const rs of memberReadStates || []) readMap[rs.user_id] = rs.last_read_at;
+      setMemberReadMap(readMap);
 
       if (data.room && new Date(data.room.expires_at).getTime() < Date.now()) {
         setIsExpired(true);
       }
 
       // 초기 번역
-      void translateMessages(data.messages || [], userLang, session.access_token);
+      void translateMessages(initialMsgs, userLang, session.access_token);
 
       // 읽음 상태 갱신 후 layout에 즉시 반영
       supabase.from('chat_room_read_state').upsert(
@@ -155,34 +188,83 @@ export default function GatherChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // ── 폴링 (5초 간격) ──
+  // ── Realtime 구독 ──
   useEffect(() => {
-    if (!accessToken || isExpired) return;
+    if (!myId || !accessToken) return;
+    const channel = supabase
+      .channel(`gather_chat_${roomId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'gather_chat_message', filter: `room_id=eq.${roomId}` },
+        async (payload) => {
+          const incoming = payload.new as {
+            id: string; sender_id: string; content: string; language: string | null; created_at: string;
+          };
 
-    pollingRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/gather/chat/${roomId}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const newMsgs: ChatMessage[] = data.messages || [];
-          setMessages(newMsgs);
-
-          if (data.room && new Date(data.room.expires_at).getTime() < Date.now()) {
-            setIsExpired(true);
+          if (incoming.sender_id === myIdRef.current) {
+            // optimistic 메시지를 실제 메시지로 교체
+            setMessages((prev) => {
+              const tempId = pendingMsgIdRef.current;
+              const tempIdx = tempId ? prev.findIndex((m) => m.id === tempId) : -1;
+              const uid = myIdRef.current!;
+              const prof = profileCacheRef.current[uid];
+              const realMsg: ChatMessage = { ...incoming, nickname: prof?.nickname ?? null, image_url: prof?.image_url ?? null, flag: prof?.flag ?? null };
+              if (tempIdx !== -1) {
+                pendingMsgIdRef.current = null;
+                const next = [...prev];
+                next[tempIdx] = realMsg;
+                return next;
+              }
+              if (prev.some((m) => m.id === incoming.id)) return prev;
+              return [...prev, realMsg];
+            });
+            return;
           }
 
-          // 폴링 시 새 메시지 번역
-          void translateMessages(newMsgs, myLanguage, accessToken);
-        }
-      } catch { /* ignore */ }
-    }, 5000);
+          // 다른 유저 메시지
+          let prof = profileCacheRef.current[incoming.sender_id];
+          if (!prof) {
+            const { data } = await supabase
+              .from('profile')
+              .select('nickname, image_url, flag')
+              .eq('id', incoming.sender_id)
+              .maybeSingle();
+            prof = { nickname: data?.nickname ?? null, image_url: data?.image_url ?? null, flag: data?.flag ?? null };
+            profileCacheRef.current[incoming.sender_id] = prof;
+          }
 
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
-  }, [accessToken, roomId, isExpired, myLanguage, translateMessages]);
+          const newMsg: ChatMessage = { ...incoming, ...prof };
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === incoming.id)) return prev;
+            return [...prev, newMsg];
+          });
+
+          void translateMessages([newMsg], myLanguageRef.current, accessTokenRef.current);
+
+          // 읽음 상태 갱신
+          const uid = myIdRef.current;
+          if (uid) {
+            supabase.from('chat_room_read_state').upsert(
+              { room_id: roomId, room_type: 'gather', user_id: uid, last_read_at: incoming.created_at },
+              { onConflict: 'room_id,room_type,user_id' }
+            ).then(() => window.dispatchEvent(new CustomEvent('unreadUpdate')));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_room_read_state', filter: `room_id=eq.${roomId}` },
+        (payload) => {
+          const row = payload.new as { user_id: string; last_read_at: string; room_type: string };
+          if (row.room_type !== 'gather') return;
+          setMemberReadMap((prev) => ({ ...prev, [row.user_id]: row.last_read_at }));
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('[GatherChat] Realtime status:', status, err ?? '');
+      });
+    return () => { supabase.removeChannel(channel); };
+  }, [roomId, myId, translateMessages]);
 
   // ── 만료 체크 ──
   useEffect(() => {
@@ -195,36 +277,43 @@ export default function GatherChatPage() {
     return () => clearInterval(checkExpiry);
   }, [room]);
 
-  // ── 메시지 전송 ──
+  // ── 메시지 전송 (optimistic) ──
   const handleSend = async () => {
-    if (!input.trim() || sending || isExpired || !accessToken) return;
+    if (!input.trim() || sending || isExpired || !accessToken || !myId) return;
 
     const content = input.trim();
+    const tempId = `temp-${myId}-${Date.now()}`;
+    const optimisticMsg: ChatMessage = {
+      id: tempId,
+      sender_id: myId,
+      content,
+      language: myLanguage,
+      created_at: new Date().toISOString(),
+      nickname: myProfile?.nickname ?? null,
+      image_url: myProfile?.image_url ?? null,
+      flag: myProfile?.flag ?? null,
+    };
+
+    pendingMsgIdRef.current = tempId;
+    setMessages((prev) => [...prev, optimisticMsg]);
     setInput('');
     setSending(true);
 
     try {
       const res = await fetch(`/api/gather/chat/${roomId}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ content, language: myLanguage }),
       });
-
-      if (res.ok) {
-        const refreshRes = await fetch(`/api/gather/chat/${roomId}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (refreshRes.ok) {
-          const data = await refreshRes.json();
-          const newMsgs: ChatMessage[] = data.messages || [];
-          setMessages(newMsgs);
-          void translateMessages(newMsgs, myLanguage, accessToken);
-        }
+      if (!res.ok) {
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+        pendingMsgIdRef.current = null;
       }
-    } catch { /* ignore */ }
+      // 성공 시 Realtime이 optimistic 교체
+    } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      pendingMsgIdRef.current = null;
+    }
 
     setSending(false);
     inputRef.current?.focus();
@@ -259,7 +348,13 @@ export default function GatherChatPage() {
           ←
         </button>
         <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-bold truncate">{room?.title || t('gather.groupChat.title')}</h2>
+          <button
+            type="button"
+            onClick={() => room?.gather_post_id && setIsGatherDetailOpen(true)}
+            className="text-sm font-bold truncate text-left hover:underline block w-full"
+          >
+            {room?.title || t('gather.groupChat.title')}
+          </button>
           {room && !isExpired && (
             <p className="text-xs text-gray-400">
               {t('gather.groupChat.expiresAt', { time: formatExpiryTime(room.expires_at) })}
@@ -308,6 +403,15 @@ export default function GatherChatPage() {
                 </div>
 
                 <div className={`flex items-center gap-1 mt-0.5 ${isMe ? 'flex-row-reverse' : ''}`}>
+                  {isMe && (() => {
+                    const readCount = Object.entries(memberReadMap)
+                      .filter(([uid, readAt]) => uid !== myId && readAt >= msg.created_at)
+                      .length;
+                    const unread = Math.max(0, totalMembers - 1 - readCount);
+                    return unread > 0 ? (
+                      <span className="text-[10px] text-[#9DB8A0] font-medium">{unread}</span>
+                    ) : null;
+                  })()}
                   <span className="text-[10px] text-gray-400">{formatTime(msg.created_at)}</span>
                   {isTranslated && !isMe && (
                     <span className="text-[10px] text-gray-400">🌐</span>
@@ -321,7 +425,7 @@ export default function GatherChatPage() {
       </div>
 
       {/* Input */}
-      <div className="border-t bg-white p-3">
+      <div className="border-t border-gray-200 bg-white px-4 pt-3 pb-10 flex-shrink-0">
         {isExpired ? (
           <p className="text-center text-sm text-gray-400 py-2">{t('gather.groupChat.expired')}</p>
         ) : (
@@ -346,6 +450,15 @@ export default function GatherChatPage() {
           </div>
         )}
       </div>
+      {room?.gather_post_id && (
+        <GatherDetailModal
+          postId={room.gather_post_id}
+          isOpen={isGatherDetailOpen}
+          onClose={() => setIsGatherDetailOpen(false)}
+          onRequireLogin={() => {}}
+          onChanged={() => {}}
+        />
+      )}
     </div>
   );
 }

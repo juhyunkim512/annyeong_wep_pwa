@@ -41,7 +41,7 @@ export async function GET(
     // 멤버인지 확인
     const { data: member } = await admin
       .from('gather_chat_member')
-      .select('id')
+      .select('id, hidden_at')
       .eq('room_id', roomId)
       .eq('user_id', user.id)
       .maybeSingle();
@@ -57,12 +57,16 @@ export async function GET(
       .eq('id', roomId)
       .maybeSingle();
 
-    // 1. 메시지 조회
-    const { data: messages, error } = await admin
+    // 1. 메시지 조회 (hidden_at 이후 메시지만)
+    let msgQuery = admin
       .from('gather_chat_message')
       .select('id, sender_id, content, language, created_at')
       .eq('room_id', roomId)
       .order('created_at', { ascending: true });
+    if (member.hidden_at) {
+      msgQuery = msgQuery.gt('created_at', member.hidden_at);
+    }
+    const { data: messages, error } = await msgQuery;
 
     if (error) {
       console.error('[gather chat GET]', error);
@@ -161,6 +165,7 @@ export async function POST(
     }
 
     // last_message / last_message_at 업데이트
+    // DB 트리거(trigger_auto_unhide_gather_members)가 last_message_at > hidden_at 시 자동 unhide 처리
     await admin
       .from('gather_chat_room')
       .update({ last_message: msg.content, last_message_at: msg.created_at })

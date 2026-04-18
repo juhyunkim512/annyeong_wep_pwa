@@ -84,7 +84,7 @@ export default function MyPagePage() {
 
   return (
     <div className="max-w-4xl space-y-6">
-      <h1 className="text-4xl font-bold">{t('myPage.title')}</h1>
+      <h1 className="text-2xl font-bold mt-4 text-gray-800">{t('myPage.title')}</h1>
 
       {/* Profile Card */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6">

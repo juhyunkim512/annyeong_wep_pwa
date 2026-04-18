@@ -213,10 +213,10 @@ export default function GatherPage() {
     <div className="max-w-4xl space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-bold">{t('gather.title')}</h1>
+        <h1 className="text-2xl font-bold mt-4 text-gray-800">{t('gather.title')}</h1>
         <button
           onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
-          className="px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-300 hover:border-[#9DB8A0] transition bg-white"
+          className="px-3 py-1.5 mt-4 rounded-lg text-sm font-medium border border-gray-300 hover:border-[#9DB8A0] transition bg-white"
         >
           {viewMode === 'list' ? t('gather.mapView') : t('gather.listView')}
         </button>
@@ -302,7 +302,7 @@ export default function GatherPage() {
 
       {/* FAB */}
       <button
-        className="fixed bottom-24 md:bottom-8 right-6 md:right-8 z-50 bg-[#9DB8A0] text-white px-5 py-3 rounded-full font-semibold shadow-lg hover:opacity-90 transition flex items-center gap-2"
+        className="fixed bottom-26 md:bottom-8 right-6 md:right-8 z-50 bg-[#9DB8A0] text-white px-5 py-3 rounded-full font-semibold shadow-lg hover:opacity-90 transition flex items-center gap-2"
         onClick={handleWriteClick}
       >
         + {t('gather.writeGather')}

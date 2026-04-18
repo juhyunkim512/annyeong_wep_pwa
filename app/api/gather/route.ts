@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminClient();
     const created_at = new Date().toISOString();
-    const expires_at = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+    const expires_at = meet_at; // 모임 시간과 동일
 
     const { data, error } = await admin
       .from('gather_post')
