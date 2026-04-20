@@ -48,9 +48,7 @@ export function usePullToRefresh({
     }
   }, [])
 
-  const safeSet = useCallback(<T>(setter: React.Dispatch<React.SetStateAction<T>>, value: T) => {
-    if (mountedRef.current) setter(value)
-  }, [])
+  const safe = (fn: () => void) => { if (mountedRef.current) fn() }
 
   const onTouchStart = useCallback(
     (e: React.TouchEvent) => {
@@ -71,14 +69,12 @@ export function usePullToRefresh({
       if (delta > 0) {
         // rubber-band 저항감 (기존 0.45 유지)
         const clamped = Math.min(delta * 0.45, threshold + 20)
-        safeSet(setPullY, clamped)
-        safeSet(
-          setRefreshState,
-          (clamped >= threshold ? 'ready' : 'pulling') as RefreshState,
-        )
+        safe(() => setPullY(clamped))
+        safe(() => setRefreshState(clamped >= threshold ? 'ready' : 'pulling'))
       }
     },
-    [disabled, threshold, safeSet],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [disabled, threshold],
   )
 
   const onTouchEnd = useCallback(() => {
@@ -87,15 +83,15 @@ export function usePullToRefresh({
 
     if (pullY < threshold || isRefreshing.current) {
       // 임계값 미달 또는 이미 새로고침 중 → 원위치
-      safeSet(setPullY, 0)
-      safeSet(setRefreshState, 'idle')
+      safe(() => setPullY(0))
+      safe(() => setRefreshState('idle'))
       return
     }
 
     // ── 새로고침 시작 ──────────────────────────────────────────
     isRefreshing.current = true
-    safeSet(setPullY, 0)
-    safeSet(setRefreshState, 'refreshing')
+    safe(() => setPullY(0))
+    safe(() => setRefreshState('refreshing'))
 
     ;(async () => {
       try {
@@ -104,25 +100,26 @@ export function usePullToRefresh({
         if (!mountedRef.current) return
 
         // 성공: 0.7초 유지
-        safeSet(setRefreshState, 'success')
+        safe(() => setRefreshState('success'))
         await new Promise<void>((resolve) => setTimeout(resolve, holdDuration))
 
         if (!mountedRef.current) return
       } catch {
         if (!mountedRef.current) return
         // 실패해도 UI가 영원히 로딩에 빠지지 않게 처리
-        safeSet(setRefreshState, 'error')
+        safe(() => setRefreshState('error'))
         await new Promise<void>((resolve) => setTimeout(resolve, holdDuration))
         if (!mountedRef.current) return
       } finally {
         // endRefreshing()에 해당
         if (mountedRef.current) {
-          safeSet(setRefreshState, 'idle')
+          setRefreshState('idle')
         }
         isRefreshing.current = false
       }
     })()
-  }, [pullY, threshold, holdDuration, onRefresh, safeSet])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pullY, threshold, holdDuration, onRefresh])
 
   const progress = Math.min(pullY / threshold, 1)
 
