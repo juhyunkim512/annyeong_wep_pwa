@@ -74,7 +74,7 @@ export function usePullToRefresh({
         safeSet(setPullY, clamped)
         safeSet(
           setRefreshState,
-          clamped >= threshold ? 'ready' : 'pulling',
+          (clamped >= threshold ? 'ready' : 'pulling') as RefreshState,
         )
       }
     },
