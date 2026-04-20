@@ -222,7 +222,7 @@ export default function HomePage() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentBanner((prev) => (prev + 1) % banners.length)
-    }, 3000)
+    }, 7000)
     return () => clearInterval(timer)
   }, [banners.length])
 
