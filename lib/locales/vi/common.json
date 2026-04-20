@@ -114,13 +114,13 @@
     "searchPlaceholder": "Tìm kiếm bài viết...",
     "categories": {
       "all": "Tất cả bài viết",
-      "food": "Ẩm thực 🍚",
-      "housing": "Nhà ở 🏠",
-      "school": "Trường học 🏫",
-      "job": "Việc làm 👨‍💻",
-      "hospital": "Bệnh viện 🏥",
-      "info": "Thông tin 💁",
-      "free": "Tự do 🍀"
+      "food": "Ẩm thực",
+      "housing": "Nhà ở",
+      "school": "Trường học",
+      "job": "Việc làm",
+      "hospital": "Bệnh viện",
+      "info": "Thông tin",
+      "free": "Tự do"
     }
   },
   "home": {
@@ -218,7 +218,17 @@
     "deleting": "Đang xóa...",
     "deleteSuccess": "Tài khoản đã bị xóa. Tạm biệt!",
     "deletePasswordWrong": "Mật khẩu không đúng.",
-    "deleteFailed": "Xóa tài khoản thất bại. Vui lòng thử lại."
+    "deleteFailed": "Xóa tài khoản thất bại. Vui lòng thử lại.",
+    "nicknameChangeConfirmTitle": "Đổi biệt danh?",
+    "nicknameChangeConfirmDesc": "Biệt danh chỉ có thể thay đổi một lần mỗi 30 ngày.",
+    "nicknameChanging": "Đang đổi biệt danh...",
+    "nicknameChanged": "Biệt danh đã được thay đổi thành công!",
+    "nicknameAlreadyInUse": "Biệt danh này đã được sử dụng.",
+    "nicknameChangeCooldown": "Bạn chỉ có thể thay đổi biệt danh một lần mỗi 30 ngày.",
+    "nicknameNextAvailable": "Ngày có thể thay đổi tiếp theo",
+    "nicknameInvalid": "Biệt danh phải có 3-15 ký tự, chỉ dùng chữ thường, số hoặc _.",
+    "confirm": "Xác nhận",
+    "cancel": "Hủy"
   },
   "friends": {
     "title": "Bạn bè",
@@ -597,7 +607,19 @@
       "fillRequired": "Vui lòng điền đầy đủ.",
       "failed": "Tạo buổi gặp thất bại.",
       "selectLocation": "Vui lòng chọn địa điểm",
-      "tapToSelectLocation": "Chạm vào bản đồ để chọn"
+      "tapToSelectLocation": "Chạm vào bản đồ để chọn",
+      "dateLabel": "Ngày",
+      "timeLabel": "Giờ",
+      "locationLabel": "Chọn địa điểm",
+      "customSelect": "Tùy chọn",
+      "mapSelectTitle": "Chọn địa điểm",
+      "am": "SA",
+      "pm": "CH",
+      "pastTimeError": "Không thể chọn thời gian quá khứ hoặc hiện tại.",
+      "confirmLocation": "Chọn vị trí này",
+      "locationSelected": "✓ Đã chọn",
+      "mapUnavailable": "Tính năng bản đồ không khả dụng",
+      "contactAdmin": "Vui lòng liên hệ quản trị viên"
     },
     "categories": {
       "language": "Trao đổi ngôn ngữ 🗣️",

@@ -114,13 +114,13 @@
     "searchPlaceholder": "投稿を検索...",
     "categories": {
       "all": "すべての投稿",
-      "food": "食べ物 🍚",
-      "housing": "住居 🏠",
-      "school": "学校 🏫",
-      "job": "仕事 👨‍💻",
-      "hospital": "病院 🏥",
-      "info": "情報 💁",
-      "free": "自由 🍀"
+      "food": "食べ物",
+      "housing": "住居",
+      "school": "学校",
+      "job": "仕事",
+      "hospital": "病院",
+      "info": "情報",
+      "free": "自由"
     }
   },
   "home": {
@@ -218,7 +218,17 @@
     "deleting": "削除中...",
     "deleteSuccess": "アカウントが削除されました。さようなら！",
     "deletePasswordWrong": "パスワードが正しくありません。",
-    "deleteFailed": "アカウントの削除に失敗しました。もう一度お試しください。"
+    "deleteFailed": "アカウントの削除に失敗しました。もう一度お試しください。",
+    "nicknameChangeConfirmTitle": "ニックネームを変更しますか？",
+    "nicknameChangeConfirmDesc": "ニックネームは30日に1回だけ変更できます。",
+    "nicknameChanging": "変更中...",
+    "nicknameChanged": "ニックネームが変更されました。",
+    "nicknameAlreadyInUse": "このニックネームはすでに使われています。",
+    "nicknameChangeCooldown": "ニックネームは30日に1回のみ変更できます。",
+    "nicknameNextAvailable": "次の変更可能日",
+    "nicknameInvalid": "ニックネームは小文字の英字、数字、_のみ使用と3～15文字で入力してください。",
+    "confirm": "確認",
+    "cancel": "キャンセル"
   },
   "friends": {
     "title": "フレンド",
@@ -597,7 +607,19 @@
       "fillRequired": "すべての必須項目を入力してください。",
       "failed": "集まりの登録に失敗しました。",
       "selectLocation": "場所を選択してください",
-      "tapToSelectLocation": "地図をタップして場所を選択"
+      "tapToSelectLocation": "地図をタップして場所を選択",
+      "dateLabel": "日付",
+      "timeLabel": "時間",
+      "locationLabel": "場所選択",
+      "customSelect": "直接選択",
+      "mapSelectTitle": "場所を選択",
+      "am": "午前",
+      "pm": "午後",
+      "pastTimeError": "過去または現在の時間は選択できません。",
+      "confirmLocation": "この場所を選択",
+      "locationSelected": "✓ 選択済み",
+      "mapUnavailable": "地図機能は利用できません",
+      "contactAdmin": "管理者にお問い合わせください"
     },
     "categories": {
       "language": "言語交換 🗣️",

@@ -218,7 +218,17 @@
     "deleting": "삭제 중...",
     "deleteSuccess": "계정이 삭제되었습니다. 안녕히 가세요!",
     "deletePasswordWrong": "비밀번호가 올바르지 않습니다.",
-    "deleteFailed": "계정 삭제에 실패했습니다. 다시 시도해 주세요."
+    "deleteFailed": "계정 삭제에 실패했습니다. 다시 시도해 주세요.",
+    "nicknameChangeConfirmTitle": "정말 닉네임을 변경할까요?",
+    "nicknameChangeConfirmDesc": "닉네임 변경은 30일마다 1번 수정 가능해요.",
+    "nicknameChanging": "닉네임 변경 중...",
+    "nicknameChanged": "닉네임이 변경되었어요.",
+    "nicknameAlreadyInUse": "이미 사용 중인 닉네임이에요.",
+    "nicknameChangeCooldown": "닉네임은 30일마다 1번만 변경할 수 있어요.",
+    "nicknameNextAvailable": "다음 변경 가능일",
+    "nicknameInvalid": "닉네임은 소문자 영문, 숫자, _만 사용해서 3~15자로 입력해 주세요.",
+    "confirm": "확인",
+    "cancel": "취소"
   },
   "friends": {
     "title": "친구",
@@ -597,7 +607,19 @@
       "fillRequired": "모든 필수 항목을 입력해 주세요.",
       "failed": "모임 등록에 실패했습니다.",
       "selectLocation": "위치를 선택하세요",
-      "tapToSelectLocation": "지도를 눌러 위치를 선택하세요"
+      "tapToSelectLocation": "지도를 눌러 위치를 선택하세요",
+      "dateLabel": "날짜",
+      "timeLabel": "시간",
+      "locationLabel": "위치선택",
+      "customSelect": "직접선택",
+      "mapSelectTitle": "위치 선택",
+      "am": "오전",
+      "pm": "오후",
+      "pastTimeError": "과거 또는 현재 시간은 선택할 수 없어요.",
+      "confirmLocation": "이 위치로 선택",
+      "locationSelected": "✓ 선택됨",
+      "mapUnavailable": "지도 기능을 사용할 수 없습니다",
+      "contactAdmin": "관리자에게 문의하세요"
     },
     "categories": {
       "language": "언어교환 🗣️",

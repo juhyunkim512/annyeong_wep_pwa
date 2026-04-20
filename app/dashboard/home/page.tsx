@@ -190,9 +190,10 @@ export default function HomePage() {
   }, [])
 
   const banners = [
-    { image: '/banner1.png', isGuide: true, href: null, communityLink: false },
-    { image: '/banner2.png', isGuide: false, href: 'https://gauge-rope-63895960.figma.site', communityLink: false },
-    { image: '/banner3.png', isGuide: false, href: null, communityLink: true },
+    { image: '/banner1.png', isGuide: false, href: 'https://cod-clay-40439412.figma.site/', communityLink: false },
+    { image: '/banner2.png', isGuide: true, href: null, communityLink: false },
+    { image: '/banner3.png', isGuide: false, href: 'https://gauge-rope-63895960.figma.site', communityLink: false },
+    { image: '/banner4.png', isGuide: false, href: null, communityLink: true },
   ]
 
   const handleBannerClick = () => {

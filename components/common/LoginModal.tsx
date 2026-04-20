@@ -7,6 +7,7 @@ import FindIdModal from './FindIdModal';
 import ResetPasswordModal from './ResetPasswordModal';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
 interface LoginFormData {
   email: string;
@@ -21,6 +22,7 @@ interface LoginModalProps {
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const router = useRouter();
   const { t } = useTranslation('common');
+  useBodyScrollLock(isOpen);
   const [formData, setFormData] = useState<LoginFormData>({
     email: '',
     password: '',
@@ -108,7 +110,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm overscroll-none flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl max-w-md w-full">
           {/* Header */}
           <div className="border-b border-gray-200 p-6 flex justify-between items-center">

@@ -1,25 +1,36 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import AvatarImage from '@/components/common/AvatarImage';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
 
+const NICKNAME_REGEX = /^[a-z0-9_]{3,15}$/;
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+
 export default function ProfileSettingsPage() {
   const router = useRouter();
   const { t } = useTranslation('common');
   const [userId, setUserId] = useState<string | null>(null);
   const [nickname, setNickname] = useState('');
-  const [savedImageUrl, setSavedImageUrl] = useState<string | null>(null); // DB에 저장된 값
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);       // 선택 후 미리보기 (미저장)
+  /** DB에 현재 저장된 닉네임 — 변경 여부 감지에 사용 */
+  const [savedNickname, setSavedNickname] = useState('');
+  const [savedImageUrl, setSavedImageUrl] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
   const [isError, setIsError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── 확인 팝업 ─────────────────────────────────────────────
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmSaving, setConfirmSaving] = useState(false);
+  // 중복 요청 방지 ref
+  const confirmInFlight = useRef(false);
 
   useEffect(() => {
     const init = async () => {
@@ -35,6 +46,7 @@ export default function ProfileSettingsPage() {
 
       if (data) {
         setNickname(data.nickname ?? '');
+        setSavedNickname(data.nickname ?? '');
         setSavedImageUrl(data.image_url ?? null);
       }
       setLoading(false);
@@ -45,21 +57,17 @@ export default function ProfileSettingsPage() {
   const showMsg = (text: string, error = false) => {
     setMsg(text);
     setIsError(error);
-    setTimeout(() => setMsg(''), 2500);
+    setTimeout(() => setMsg(''), 3000);
   };
 
-  // [수정] MIME 타입 + 10MB 제한 + 에러 로그
-  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     if (!file) return;
     if (!ALLOWED_TYPES.includes(file.type) && !file.name.match(/\.(heic|heif)$/i)) {
-      console.error('[Profile] 차단된 MIME 타입:', file.type, file.name);
       showMsg('Unsupported image format', true);
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      console.error('[Profile] 파일 용량 초과:', (file.size / 1024 / 1024).toFixed(1) + 'MB');
       showMsg('Image must be under 10MB', true);
       return;
     }
@@ -67,52 +75,144 @@ export default function ProfileSettingsPage() {
     setPreviewUrl(URL.createObjectURL(file));
   };
 
-  // Save Changes → 닉네임 + 사진(있으면) 한 번에 저장
+  /** 이미지만 저장 (닉네임 미변경 시 또는 닉네임 변경 성공 후 호출) */
+  const saveImage = useCallback(async (currentUserId: string, currentSavedImageUrl: string | null, file: File | null) => {
+    if (!file) return currentSavedImageUrl;
+    const filePath = `${currentUserId}/${Date.now()}-${file.name}`;
+    const contentType = file.type || 'image/jpeg';
+    const { error: uploadErr } = await supabase.storage
+      .from('profile-images')
+      .upload(filePath, file, { upsert: false, contentType });
+    if (uploadErr) {
+      console.error('[Profile] 이미지 업로드 실패:', uploadErr.message);
+      throw new Error('imageUploadFailed');
+    }
+    const { data: urlData } = supabase.storage.from('profile-images').getPublicUrl(filePath);
+    return urlData.publicUrl;
+  }, []);
+
+  // ── 폼 제출: validation → 팝업 또는 이미지만 저장 ─────────
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId) return;
-    if (!nickname.trim()) { showMsg(t('settings.nicknameEmpty'), true); return; }
-    setSaving(true);
+    if (!userId || saving) return;
 
-    let newImageUrl = savedImageUrl;
+    const trimmed = nickname.trim();
 
-    // 사진이 새로 선택됐으면 매번 고유한 파일명으로 업로드
-    if (avatarFile) {
-      const ext = avatarFile.name.split('.').pop()?.toLowerCase() ?? 'jpg';
-      const filePath = `${userId}/${Date.now()}-${avatarFile.name}`;
-      const contentType = avatarFile.type || `image/${ext}`;
-      const { error: uploadErr } = await supabase.storage
-        .from('profile-images')
-        .upload(filePath, avatarFile, { upsert: false, contentType });
-      if (!uploadErr) {
-        const { data: urlData } = supabase.storage.from('profile-images').getPublicUrl(filePath);
-        newImageUrl = urlData.publicUrl;
-      } else {
-        console.error('[Profile] 이미지 업로드 실패:', uploadErr.message, avatarFile.name);
-        showMsg(t('settings.imageUploadFailed'), true);
-        setSaving(false);
-        return;
-      }
-    }
-
-    const { error: updateErr } = await supabase.from('profile').update({
-      nickname: nickname.trim(),
-      image_url: newImageUrl,
-    }).eq('id', userId);
-
-    if (updateErr) {
-      showMsg(t('settings.saveFailed'), true);
-      setSaving(false);
+    // empty check
+    if (!trimmed) {
+      showMsg(t('settings.nicknameEmpty'), true);
       return;
     }
 
-    // 저장 성공 후 상태 초기화
-    setSavedImageUrl(newImageUrl);
-    setAvatarFile(null);
-    setPreviewUrl(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    setSaving(false);
-    showMsg(t('settings.savedSuccess'));
+    // format validation (팝업 띄우기 전에 먼저 검사)
+    if (!NICKNAME_REGEX.test(trimmed)) {
+      showMsg(t('settings.nicknameInvalid'), true);
+      return;
+    }
+
+    // 닉네임 변경 시 → 확인 팝업
+    if (trimmed !== savedNickname) {
+      setShowConfirm(true);
+      return;
+    }
+
+    // 닉네임 동일 → 이미지만 저장
+    if (!avatarFile) {
+      showMsg(t('settings.savedSuccess'));
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const newImageUrl = await saveImage(userId, savedImageUrl, avatarFile);
+      const { error: updateErr } = await supabase
+        .from('profile')
+        .update({ image_url: newImageUrl })
+        .eq('id', userId);
+      if (updateErr) throw new Error('updateFailed');
+      setSavedImageUrl(newImageUrl);
+      setAvatarFile(null);
+      setPreviewUrl(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      showMsg(t('settings.savedSuccess'));
+    } catch (err: any) {
+      showMsg(t(err.message === 'imageUploadFailed' ? 'settings.imageUploadFailed' : 'settings.saveFailed'), true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── 팝업 확인: 닉네임 변경 API 호출 ─────────────────────────
+  const handleNicknameConfirm = async () => {
+    if (confirmInFlight.current) return;
+    confirmInFlight.current = true;
+    setConfirmSaving(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !userId) {
+        showMsg(t('settings.saveFailed'), true);
+        setShowConfirm(false);
+        return;
+      }
+
+      const trimmed = nickname.trim();
+
+      const res = await fetch('/api/profile/change-nickname', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ nickname: trimmed }),
+      });
+
+      const data = await res.json();
+      setShowConfirm(false);
+
+      if (!data.success) {
+        // 30일 쿨다운
+        if (res.status === 429 && data.nextAvailableAt) {
+          const date = new Date(data.nextAvailableAt);
+          const formatted = `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+          showMsg(`${t('settings.nicknameChangeCooldown')} ${t('settings.nicknameNextAvailable')}: ${formatted}`, true);
+        } else if (res.status === 409) {
+          showMsg(t('settings.nicknameAlreadyInUse'), true);
+        } else if (res.status === 400) {
+          showMsg(t('settings.nicknameInvalid'), true);
+        } else {
+          showMsg(data.message || t('settings.saveFailed'), true);
+        }
+        return;
+      }
+
+      // 닉네임 변경 성공 → savedNickname 갱신
+      setSavedNickname(trimmed);
+
+      // 이미지도 변경됐으면 이어서 저장
+      if (avatarFile) {
+        try {
+          const newImageUrl = await saveImage(userId, savedImageUrl, avatarFile);
+          const { error: imgErr } = await supabase
+            .from('profile')
+            .update({ image_url: newImageUrl })
+            .eq('id', userId);
+          if (!imgErr) {
+            setSavedImageUrl(newImageUrl);
+            setAvatarFile(null);
+            setPreviewUrl(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+          }
+        } catch {
+          // 이미지 실패해도 닉네임은 성공 — 메시지는 닉네임 성공으로 표시
+        }
+      }
+
+      showMsg(t('settings.nicknameChanged'));
+    } finally {
+      setConfirmSaving(false);
+      confirmInFlight.current = false;
+    }
   };
 
   const displayImage = previewUrl ?? savedImageUrl;
@@ -176,6 +276,38 @@ export default function ProfileSettingsPage() {
           </button>
         </form>
       </div>
+
+      {/* ── 닉네임 변경 확인 팝업 ── */}
+      {showConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-6 sm:pb-0"
+          onClick={(e) => { if (e.target === e.currentTarget && !confirmSaving) setShowConfirm(false); }}
+        >
+          <div className="w-full sm:w-auto sm:min-w-[320px] sm:max-w-sm bg-white rounded-2xl p-6 space-y-4 shadow-xl">
+            <h2 className="text-base font-bold text-gray-900">{t('settings.nicknameChangeConfirmTitle')}</h2>
+            <p className="text-sm text-gray-500 leading-relaxed">{t('settings.nicknameChangeConfirmDesc')}</p>
+            <div className="flex gap-3 pt-1">
+              <button
+                type="button"
+                disabled={confirmSaving}
+                onClick={() => !confirmSaving && setShowConfirm(false)}
+                className="flex-1 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition"
+              >
+                {t('settings.cancel')}
+              </button>
+              <button
+                type="button"
+                disabled={confirmSaving}
+                onClick={handleNicknameConfirm}
+                className="flex-1 py-2.5 rounded-lg bg-[#9DB8A0] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition"
+              >
+                {confirmSaving ? t('settings.nicknameChanging') : t('settings.confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

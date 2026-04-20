@@ -114,13 +114,13 @@
     "searchPlaceholder": "搜索帖子...",
     "categories": {
       "all": "全部帖子",
-      "food": "美食 🍚",
-      "housing": "住房 🏠",
-      "school": "学校 🏫",
-      "job": "工作 👨‍💻",
-      "hospital": "医院 🏥",
-      "info": "信息 💁",
-      "free": "自由 🍀"
+      "food": "美食",
+      "housing": "住房",
+      "school": "学校",
+      "job": "工作",
+      "hospital": "医院",
+      "info": "信息",
+      "free": "自由"
     }
   },
   "home": {
@@ -218,7 +218,17 @@
     "deleting": "正在删除...",
     "deleteSuccess": "账号已删除。再见！",
     "deletePasswordWrong": "密码不正确。",
-    "deleteFailed": "账号删除失败，请重试。"
+    "deleteFailed": "账号删除失败，请重试。",
+    "nicknameChangeConfirmTitle": "确定要更改昵称吗？",
+    "nicknameChangeConfirmDesc": "昵称每30天只能修改一次。",
+    "nicknameChanging": "正在更改昵称...",
+    "nicknameChanged": "昵称已更改成功！",
+    "nicknameAlreadyInUse": "该昵称已被使用。",
+    "nicknameChangeCooldown": "昵称每30天只能更改一次。",
+    "nicknameNextAvailable": "下次可修改日期",
+    "nicknameInvalid": "昵称只能使用小写字母、数字和_，长度为3-15个字符。",
+    "confirm": "确认",
+    "cancel": "取消"
   },
   "friends": {
     "title": "好友",
@@ -597,7 +607,19 @@
       "fillRequired": "请填写所有必填项。",
       "failed": "创建聚会失败。",
       "selectLocation": "请选择地点",
-      "tapToSelectLocation": "点击地图选择地点"
+      "tapToSelectLocation": "点击地图选择地点",
+      "dateLabel": "日期",
+      "timeLabel": "时间",
+      "locationLabel": "选择地点",
+      "customSelect": "自定义",
+      "mapSelectTitle": "选择地点",
+      "am": "上午",
+      "pm": "下午",
+      "pastTimeError": "无法选择过去或当前的时间。",
+      "confirmLocation": "选择此位置",
+      "locationSelected": "✓ 已选择",
+      "mapUnavailable": "地图功能不可用",
+      "contactAdmin": "请联系管理员"
     },
     "categories": {
       "language": "语言交换 🗣️",

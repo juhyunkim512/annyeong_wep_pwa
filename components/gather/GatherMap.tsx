@@ -1,28 +1,63 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useI18nLang } from '@/lib/hooks/useI18nLang';
+import '@/lib/i18n';
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
+// Google Maps 언어 코드 매핑 (앱 lang → Google Maps language param)
+const GOOGLE_MAPS_LANG: Record<string, string> = {
+  ko: 'ko',
+  en: 'en',
+  zh: 'zh-CN',
+  ja: 'ja',
+  es: 'es',
+  vi: 'vi',
+};
+
 let mapsLoaded = false;
+let mapsLoadedLang = '';
 let mapsLoadPromise: Promise<void> | null = null;
 
-function loadGoogleMaps(): Promise<void> {
-  if (mapsLoaded) return Promise.resolve();
+function loadGoogleMaps(lang: string = 'en'): Promise<void> {
+  const googleLang = GOOGLE_MAPS_LANG[lang] ?? 'en';
+
+  // 이미 같은 언어로 로드됨
+  if (mapsLoaded && mapsLoadedLang === lang) return Promise.resolve();
+
+  // 다른 언어로 로드된 경우 → 기존 스크립트 제거 후 재로드
+  if (mapsLoaded && mapsLoadedLang !== lang) {
+    const existing = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (existing) existing.remove();
+    if ((window as any).google?.maps) {
+      delete (window as any).google.maps;
+    }
+    mapsLoaded = false;
+    mapsLoadedLang = '';
+    mapsLoadPromise = null;
+  }
+
   if (mapsLoadPromise) return mapsLoadPromise;
 
   mapsLoadPromise = new Promise((resolve, reject) => {
     if (typeof window === 'undefined') return reject('SSR');
     if ((window as any).google?.maps) {
       mapsLoaded = true;
+      mapsLoadedLang = lang;
       return resolve();
     }
     if (!GOOGLE_MAPS_API_KEY) return reject('No API key');
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&language=${googleLang}`;
     script.async = true;
     script.defer = true;
-    script.onload = () => { mapsLoaded = true; resolve(); };
+    script.onload = () => {
+      mapsLoaded = true;
+      mapsLoadedLang = lang;
+      resolve();
+    };
     script.onerror = () => reject('Failed to load Google Maps');
     document.head.appendChild(script);
   });
@@ -38,6 +73,8 @@ interface GatherMapPickerProps {
 }
 
 export function GatherMapPicker({ onSelect, hint, fullscreen }: GatherMapPickerProps) {
+  const { t } = useTranslation('common');
+  const { currentLang } = useI18nLang();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const [ready, setReady] = useState(false);
@@ -47,10 +84,15 @@ export function GatherMapPicker({ onSelect, hint, fullscreen }: GatherMapPickerP
 
   useEffect(() => {
     if (!GOOGLE_MAPS_API_KEY) return;
-    loadGoogleMaps()
+    // 언어가 바뀌면 기존 지도 인스턴스 파괴 후 재초기화
+    mapInstance.current = null;
+    setReady(false);
+    setCurrentAddress('');
+    setSelected(false);
+    loadGoogleMaps(currentLang)
       .then(() => setReady(true))
       .catch(() => {});
-  }, []);
+  }, [currentLang]);
 
   useEffect(() => {
     if (!ready || !mapRef.current || mapInstance.current) return;
@@ -110,8 +152,8 @@ export function GatherMapPicker({ onSelect, hint, fullscreen }: GatherMapPickerP
     return (
       <div className="w-full h-56 bg-gray-100 rounded-xl flex flex-col items-center justify-center gap-2 text-gray-400 text-sm">
         <span className="text-2xl">🗺️</span>
-        <span>지도 기능을 사용할 수 없습니다</span>
-        <span className="text-xs text-gray-300">관리자에게 문의하세요</span>
+        <span>{t('gather.write.mapUnavailable')}</span>
+        <span className="text-xs text-gray-300">{t('gather.write.contactAdmin')}</span>
       </div>
     );
   }
@@ -121,7 +163,7 @@ export function GatherMapPicker({ onSelect, hint, fullscreen }: GatherMapPickerP
       {/* 지도 */}
       <div ref={mapRef} className={fullscreen ? 'w-full h-full' : 'w-full h-56 rounded-xl overflow-hidden border border-gray-200'} />
 
-      {/* 중앙 고정 핀 (pointer-events-none으로 드래그 방해 안 함) */}
+      {/* 중앙 고정 핀 */}
       {ready && (
         <div className="absolute pointer-events-none" style={{ bottom: '50%', left: '50%', transform: 'translateX(-50%)' }}>
           <div className="flex flex-col items-center">
@@ -158,7 +200,7 @@ export function GatherMapPicker({ onSelect, hint, fullscreen }: GatherMapPickerP
                 : 'bg-[#9DB8A0] text-white hover:opacity-90 disabled:opacity-50'
             }`}
           >
-            {confirming ? '...' : selected ? '✓ 선택됨' : '이 위치로 선택'}
+            {confirming ? '...' : selected ? t('gather.write.locationSelected') : t('gather.write.confirmLocation')}
           </button>
         </div>
       )}
@@ -190,13 +232,16 @@ interface GatherMapViewProps {
 }
 
 export function GatherMapView({ pins, onPinClick }: GatherMapViewProps) {
+  const { currentLang } = useI18nLang();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    loadGoogleMaps()
+    mapInstance.current = null;
+    setReady(false);
+    loadGoogleMaps(currentLang)
       .then(() => setReady(true))
       .catch(() => {});
   }, []);

@@ -3,6 +3,8 @@
 import React, { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useTranslation } from 'react-i18next';
+import { useI18nLang } from '@/lib/hooks/useI18nLang';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import '@/lib/i18n';
 import { GatherMapPicker } from '@/components/gather/GatherMap';
 
@@ -31,6 +33,14 @@ interface WriteGatherModalProps {
 
 export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: WriteGatherModalProps) {
   const { t } = useTranslation('common');
+  const { currentLang } = useI18nLang();
+  useBodyScrollLock(isOpen);
+
+  // 언어 → Intl locale 매핑
+  const INTL_LOCALE: Record<string, string> = {
+    ko: 'ko-KR', en: 'en-US', zh: 'zh-CN', ja: 'ja-JP', es: 'es-ES', vi: 'vi-VN',
+  };
+  const intlLocale = INTL_LOCALE[currentLang] ?? 'en-US';
 
   const [category, setCategory] = useState('');
   const [title, setTitle] = useState('');
@@ -78,13 +88,12 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
   });
 
   const formatDateLabel = (d: Date) => {
-    const days = ['일', '월', '화', '수', '목', '금', '토'];
-    return `${d.getMonth() + 1}월 ${d.getDate()}일 ${days[d.getDay()]}요일`;
+    return d.toLocaleDateString(intlLocale, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
   };
   const formatTimeLabel = (h: number, m: number) => {
-    const ampm = h < 12 ? '오전' : '오후';
-    const h12 = h % 12 === 0 ? 12 : h % 12;
-    return `${ampm} ${h12}:${String(m).padStart(2, '0')}`;
+    const date = new Date();
+    date.setHours(h, m, 0, 0);
+    return date.toLocaleTimeString(intlLocale, { hour: 'numeric', minute: '2-digit', hour12: true });
   };
 
   // 달력 계산
@@ -142,7 +151,7 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
     // 과거 시간 유효성 검사
     const meetAt = getMeetAt();
     if (new Date(meetAt).getTime() <= getNowKST().getTime()) {
-      setError('과거 또는 현재 시간은 선택할 수 없어요.');
+      setError(t('gather.write.pastTimeError'));
       return;
     }
 
@@ -223,12 +232,14 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
     {/* 날짜 바텀시트 */}
     {showDatePicker && (
       <div className="fixed inset-0 z-[200] flex flex-col justify-end">
-        <div className="absolute inset-0 bg-black/40" onClick={() => setShowDatePicker(false)} />
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowDatePicker(false)} />
         <div className="relative bg-white rounded-t-2xl px-5 pt-4 pb-8">
           <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
           {/* 달력 헤더 */}
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold">{calendarMonth.year}년 {calendarMonth.month + 1}월</span>
+            <span className="text-sm font-semibold">
+              {new Date(calendarMonth.year, calendarMonth.month, 1).toLocaleDateString(intlLocale, { year: 'numeric', month: 'long' })}
+            </span>
             <div className="flex gap-2">
               <button type="button" onClick={() => setCalendarMonth((prev) => { const d = new Date(prev.year, prev.month - 1); return { year: d.getFullYear(), month: d.getMonth() }; })} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">‹</button>
               <button type="button" onClick={() => setCalendarMonth((prev) => { const d = new Date(prev.year, prev.month + 1); return { year: d.getFullYear(), month: d.getMonth() }; })} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">›</button>
@@ -236,7 +247,10 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
           </div>
           {/* 요일 */}
           <div className="grid grid-cols-7 text-center mb-1">
-            {['일','월','화','수','목','금','토'].map((d) => <span key={d} className="text-xs text-gray-400 py-1">{d}</span>)}
+            {Array.from({ length: 7 }, (_, i) => {
+              const d = new Date(2023, 0, i + 1); // 2023-01-01은 일요일
+              return <span key={i} className="text-xs text-gray-400 py-1">{new Intl.DateTimeFormat(intlLocale, { weekday: 'short' }).format(d)}</span>;
+            })}
           </div>
           {/* 날짜 */}
           <div className="grid grid-cols-7 text-center gap-y-1">
@@ -261,7 +275,7 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
           </div>
           <button type="button" onClick={() => setShowDatePicker(false)}
             className="mt-5 w-full py-3 bg-[#9DB8A0] text-white rounded-xl text-sm font-semibold">
-            확인
+            {t('common.confirm')}
           </button>
         </div>
       </div>
@@ -270,13 +284,13 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
     {/* 시간 바텀시트 */}
     {showTimePicker && (
       <div className="fixed inset-0 z-[200] flex flex-col justify-end">
-        <div className="absolute inset-0 bg-black/40" onClick={() => setShowTimePicker(false)} />
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowTimePicker(false)} />
         <div className="relative bg-white rounded-t-2xl px-5 pt-4 pb-8">
           <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
           <div className="flex rounded-xl border border-gray-200 overflow-hidden">
             {/* 오전/오후 */}
             <div className="flex flex-col flex-1 border-r border-gray-200 max-h-52 overflow-y-auto">
-              {['오전', '오후'].map((ap, i) => {
+              {[t('gather.write.am'), t('gather.write.pm')].map((ap, i) => {
                 const isSelected = (selectedHour < 12) === (i === 0);
                 return (
                   <button key={ap} type="button"
@@ -342,7 +356,7 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
           </div>
           <button type="button" onClick={() => setShowTimePicker(false)}
             className="mt-5 w-full py-3 bg-[#9DB8A0] text-white rounded-xl text-sm font-semibold">
-            확인
+            {t('common.confirm')}
           </button>
         </div>
       </div>
@@ -359,7 +373,7 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
           >
             ←
           </button>
-          <span className="text-base font-semibold">위치 선택</span>
+          <span className="text-base font-semibold">{t('gather.write.mapSelectTitle')}</span>
         </div>
         <div className="flex-1 relative overflow-hidden">
           <GatherMapPicker
@@ -370,7 +384,7 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
         </div>
       </div>
     )}
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm overscroll-none flex items-end sm:items-center justify-center z-50">
       <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-lg w-full p-5 relative max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
@@ -438,7 +452,7 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
           {/* 날짜 선택 */}
           <div>
             <div className="flex items-center justify-between py-3 border-b border-gray-100">
-              <span className="text-sm font-semibold text-gray-700">날짜</span>
+              <span className="text-sm font-semibold text-gray-700">{t('gather.write.dateLabel')}</span>
               <button
                 type="button"
                 onClick={() => { setShowDatePicker(true); setShowTimePicker(false); }}
@@ -453,7 +467,7 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
           {/* 시간 선택 */}
           <div>
             <div className="flex items-center justify-between py-3 border-b border-gray-100">
-              <span className="text-sm font-semibold text-gray-700">시간</span>
+              <span className="text-sm font-semibold text-gray-700">{t('gather.write.timeLabel')}</span>
               <button
                 type="button"
                 onClick={() => { setShowTimePicker(true); setShowDatePicker(false); }}
@@ -468,13 +482,13 @@ export default function WriteGatherModal({ isOpen, onClose, onRequireLogin }: Wr
           {/* 위치 선택 */}
           <div>
             <div className="flex items-center justify-between py-3 border-b border-gray-100">
-              <span className="text-sm font-semibold text-gray-700">위치선택</span>
+              <span className="text-sm font-semibold text-gray-700">{t('gather.write.locationLabel')}</span>
               <button
                 type="button"
                 onClick={() => setShowFullscreenMap(true)}
                 className="flex items-center gap-1 text-sm text-gray-500"
               >
-                직접선택
+                {t('gather.write.customSelect')}
                 <span className="text-gray-400">›</span>
               </button>
             </div>

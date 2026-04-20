@@ -9,6 +9,7 @@ import '@/lib/i18n';
 import { normalizeLang } from '@/lib/utils/normalizeLang';
 import { batchTranslate } from '@/lib/utils/batchTranslate';
 import UserProfileModal from '@/components/common/UserProfileModal';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
 
 
@@ -46,6 +47,7 @@ export default function GatherDetailModal({
   onChanged,
 }: GatherDetailModalProps) {
   const { t } = useTranslation('common');
+  useBodyScrollLock(isOpen);
   const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const router = useRouter();

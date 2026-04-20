@@ -2,11 +2,13 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import '@/lib/i18n'
 import { usePushNotification } from '@/lib/hooks/usePushNotification'
+import { usePullToRefresh } from '@/lib/hooks/usePullToRefresh'
+import RefreshIndicator from '@/components/common/RefreshIndicator'
 import { supabase } from '@/lib/supabase/client'
 
 const PULL_THRESHOLD = 72 // px
@@ -17,16 +19,30 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
   const { t } = useTranslation('common')
 
   // 푸쉬 알림 구독 (로그인 상태면 자동 요청)
   usePushNotification()
 
+  const isChatRoom = /^\/dashboard\/(chat|gather\/chat)\/[^/]+/.test(pathname)
+
   // ── Pull-to-refresh ──────────────────────────────────────
-  const [pullY, setPullY] = useState(0)
-  const [refreshing, setRefreshing] = useState(false)
-  const touchStartY = useRef(0)
-  const isPulling = useRef(false)
+  // reloadData(): Next.js router.refresh()로 서버 컴포넌트 재검증
+  const handleRefresh = useCallback(async () => {
+    router.refresh()
+    // router.refresh()는 비동기 완료 신호가 없으므로 최소 대기 후 반환
+    // 실제 데이터 fetch는 각 페이지 컴포넌트에서 처리됨
+    await new Promise<void>((resolve) => setTimeout(resolve, 300))
+  }, [router])
+
+  const { pullY, refreshState, progress, onTouchStart, onTouchMove, onTouchEnd } =
+    usePullToRefresh({
+      threshold: PULL_THRESHOLD,
+      holdDuration: 700,
+      onRefresh: handleRefresh,
+      disabled: isChatRoom,
+    })
 
   // ── Total unread badge ──────────────────────────────────
   const [totalUnread, setTotalUnread] = useState(0)
@@ -118,36 +134,7 @@ export default function DashboardLayout({
     }
   }, [pathname])
 
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    const main = e.currentTarget as HTMLElement
-    if (main.scrollTop === 0) {
-      touchStartY.current = e.touches[0].clientY
-      isPulling.current = true
-    }
-  }, [])
-
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isPulling.current) return
-    const delta = e.touches[0].clientY - touchStartY.current
-    if (delta > 0) {
-      // rubber-band: 저항감
-      setPullY(Math.min(delta * 0.45, PULL_THRESHOLD + 20))
-    }
-  }, [])
-
-  const onTouchEnd = useCallback(() => {
-    if (!isPulling.current) return
-    isPulling.current = false
-    if (pullY >= PULL_THRESHOLD) {
-      setRefreshing(true)
-      setPullY(0)
-      window.location.reload()
-    } else {
-      setPullY(0)
-    }
-  }, [pullY])
-
-  const isChatRoom = /^\/dashboard\/(chat|gather\/chat)\/[^/]+/.test(pathname)
+  // isChatRoom은 위에서 이미 선언됨
 
   const menuItems = [
     { icon: '/icons/tab-home.png', label: t('nav.main'), href: '/dashboard/home' },
@@ -242,18 +229,12 @@ export default function DashboardLayout({
       >
         {/* Pull-to-refresh 인디케이터 (모바일 전용) */}
         {!isChatRoom && (
-        <div
-          className="md:hidden flex items-center justify-center overflow-hidden transition-all duration-200"
-          style={{ height: refreshing ? 48 : pullY > 0 ? pullY : 0 }}
-        >
-          <div
-            className={`w-7 h-7 rounded-full border-2 border-[#9DB8A0] border-t-transparent ${refreshing ? 'animate-spin' : ''}`}
-            style={{
-              opacity: Math.min(pullY / PULL_THRESHOLD, 1),
-              transform: `rotate(${pullY * 3}deg)`,
-            }}
+          <RefreshIndicator
+            refreshState={refreshState}
+            pullY={pullY}
+            progress={progress}
+            threshold={PULL_THRESHOLD}
           />
-        </div>
         )}
         <div className={isChatRoom ? 'flex-1 flex flex-col min-h-0' : 'px-6 pt-0 pb-6 md:px-8 md:pt-2 md:pb-8'}>{children}</div>
       </main>

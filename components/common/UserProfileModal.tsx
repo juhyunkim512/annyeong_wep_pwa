@@ -6,6 +6,7 @@ import AvatarImage from './AvatarImage';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
 const FLAG_EMOJI_MAP: { [key: string]: string } = {
   korea: '🇰🇷',
@@ -50,6 +51,8 @@ export default function UserProfileModal({
   onLoginRequired,
   onBlockChange,
 }: UserProfileModalProps) {
+  const { t } = useTranslation('common');
+  useBodyScrollLock(isOpen);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [isBlocked, setIsBlocked] = useState(false);
@@ -62,7 +65,6 @@ export default function UserProfileModal({
   const [followLoading, setFollowLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [followerCount, setFollowerCount] = useState<number>(0);
-  const { t } = useTranslation('common');
   const router = useRouter();
 
   const [page, setPage] = useState(0);
@@ -262,7 +264,7 @@ export default function UserProfileModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm overscroll-none flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-md w-full max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="border-b border-gray-200 p-5 flex justify-between items-center flex-shrink-0">

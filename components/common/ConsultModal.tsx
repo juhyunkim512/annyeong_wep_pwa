@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import '@/lib/i18n'
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock'
 
 const SNS_OPTIONS = ['KakaoTalk', 'LINE', 'WeChat', 'WhatsApp']
 
@@ -23,6 +24,7 @@ interface ConsultModalProps {
 
 export default function ConsultModal({ isOpen, onClose, defaultPurpose }: ConsultModalProps) {
   const { t } = useTranslation('common')
+  useBodyScrollLock(isOpen)
 
   const [name, setName]       = useState('')
   const [age, setAge]         = useState('')
@@ -62,7 +64,7 @@ export default function ConsultModal({ isOpen, onClose, defaultPurpose }: Consul
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm overscroll-none flex items-end sm:items-center justify-center"
       onClick={handleClose}
     >
       <div

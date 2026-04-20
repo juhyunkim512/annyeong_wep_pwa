@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
 interface DeleteAccountModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ type Step = 1 | 2 | 3;
 export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps) {
   const router = useRouter();
   const { t } = useTranslation('common');
+  useBodyScrollLock(isOpen);
 
   const [step, setStep] = useState<Step>(1);
   const [password, setPassword] = useState('');
@@ -103,7 +105,7 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm overscroll-none flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-md w-full shadow-xl">
         {/* Header */}
         <div className="border-b border-gray-200 p-6 flex justify-between items-center">

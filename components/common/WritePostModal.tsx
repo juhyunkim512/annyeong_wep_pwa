@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
 const TITLE_MAX = 30;
 const CONTENT_MAX = 200;
@@ -24,6 +25,7 @@ interface WritePostModalProps {
 
 export default function WritePostModal({ isOpen, onClose, onRequireLogin }: WritePostModalProps) {
   const { t } = useTranslation('common');
+  useBodyScrollLock(isOpen);
   const [category, setCategory] = useState('');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -150,7 +152,7 @@ export default function WritePostModal({ isOpen, onClose, onRequireLogin }: Writ
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm overscroll-none flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full p-6 relative max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-4">

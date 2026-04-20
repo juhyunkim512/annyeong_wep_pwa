@@ -114,13 +114,13 @@
     "searchPlaceholder": "Buscar publicaciones...",
     "categories": {
       "all": "Todas las publicaciones",
-      "food": "Comida 🍚",
-      "housing": "Vivienda 🏠",
-      "school": "Escuela 🏫",
-      "job": "Trabajo 👨‍💻",
-      "hospital": "Hospital 🏥",
-      "info": "Info 💁",
-      "free": "Libre 🍀"
+      "food": "Comida",
+      "housing": "Vivienda",
+      "school": "Escuela",
+      "job": "Trabajo",
+      "hospital": "Hospital",
+      "info": "Info",
+      "free": "Libre"
     }
   },
   "home": {
@@ -218,7 +218,17 @@
     "deleting": "Eliminando...",
     "deleteSuccess": "¡Cuenta eliminada. ¡Adiós!",
     "deletePasswordWrong": "Contraseña incorrecta.",
-    "deleteFailed": "Error al eliminar la cuenta. Inténtalo de nuevo."
+    "deleteFailed": "Error al eliminar la cuenta. Inténtalo de nuevo.",
+    "nicknameChangeConfirmTitle": "¿Cambiar apodo?",
+    "nicknameChangeConfirmDesc": "Solo puedes cambiar tu apodo una vez cada 30 días.",
+    "nicknameChanging": "Cambiando apodo...",
+    "nicknameChanged": "¡Apodo cambiado exitosamente!",
+    "nicknameAlreadyInUse": "Este apodo ya está en uso.",
+    "nicknameChangeCooldown": "Solo puedes cambiar tu apodo una vez cada 30 días.",
+    "nicknameNextAvailable": "Próxima fecha disponible",
+    "nicknameInvalid": "El apodo debe tener 3-15 caracteres usando solo letras minúsculas, números o _.",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar"
   },
   "friends": {
     "title": "Amigos",
@@ -597,7 +607,19 @@
       "fillRequired": "Complete todos los campos requeridos.",
       "failed": "Error al crear la reunión.",
       "selectLocation": "Seleccione una ubicación",
-      "tapToSelectLocation": "Toque el mapa para seleccionar"
+      "tapToSelectLocation": "Toque el mapa para seleccionar",
+      "dateLabel": "Fecha",
+      "timeLabel": "Hora",
+      "locationLabel": "Ubicación",
+      "customSelect": "Personalizar",
+      "mapSelectTitle": "Seleccionar ubicación",
+      "am": "AM",
+      "pm": "PM",
+      "pastTimeError": "No se puede seleccionar una hora pasada o actual.",
+      "confirmLocation": "Seleccionar esta ubicación",
+      "locationSelected": "✓ Seleccionado",
+      "mapUnavailable": "El mapa no está disponible",
+      "contactAdmin": "Por favor contacte al administrador"
     },
     "categories": {
       "language": "Intercambio de idiomas 🗣️",

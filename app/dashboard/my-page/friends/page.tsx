@@ -255,7 +255,7 @@ export default function FriendsPage() {
       ) : tab === 'following' ? (
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
           {followingUsers.length === 0 ? (
-            <div className="p-8 text-center">
+            <div className="p-8 flex flex-col items-center">
               <img src="/icons/tab-mypage.png" className="w-10 h-10 object-contain mb-3" />
               <p className="text-gray-400 text-sm">{t('friends.noFollowing')}</p>
             </div>
@@ -283,7 +283,7 @@ export default function FriendsPage() {
         // [추가] Followers 목록
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
           {followerUsers.length === 0 ? (
-            <div className="p-8 text-center">
+            <div className="p-8 flex flex-col items-center">
               <img src="/icons/tab-mypage.png" className="w-10 h-10 object-contain mb-3" />
               <p className="text-gray-400 text-sm">{t('friends.noFollowers')}</p>
             </div>
@@ -310,8 +310,8 @@ export default function FriendsPage() {
       ) : (
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
           {blockedUsers.length === 0 ? (
-            <div className="p-8 text-center">
-              <img src="/icons/no.png" className="w-10 h-10 object-contain mx-auto mb-3" />
+            <div className="p-8 flex flex-col items-center">
+              <img src="/icons/no.png" className="w-10 h-10 object-contain mb-3" />
               <p className="text-gray-400 text-sm">{t('friends.noBlocked')}</p>
             </div>
           ) : (

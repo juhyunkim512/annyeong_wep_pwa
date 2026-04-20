@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/lib/supabase/client';
 import '@/lib/i18n';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
 interface SignupFormData {
   email: string;
@@ -43,6 +44,7 @@ interface SignupModalProps {
 export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
   const router = useRouter();
   const { t } = useTranslation('common');
+  useBodyScrollLock(isOpen);
   // 초기값: 직접 문자열 코드값 사용 (null.value 에러 방지)
   const [formData, setFormData] = useState<SignupFormData>({
     email: '',
@@ -350,7 +352,7 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm overscroll-none flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
@@ -588,7 +590,7 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
 
       {/* Language Confirmation Modal */}
       {showLanguageWarning && languageToConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm overscroll-none flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6">
             {/* Header */}
             <h3 className="text-lg font-bold mb-4">{t('signup.confirmLanguageTitle')}</h3>

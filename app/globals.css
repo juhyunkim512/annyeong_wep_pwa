@@ -18,3 +18,9 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* PWA / Chrome Android pull-to-refresh 전역 차단.
+   모달이 없는 일반 페이지에서도 의도치 않은 새로고침 방지. */
+html, body {
+  overscroll-behavior-y: none;
+}

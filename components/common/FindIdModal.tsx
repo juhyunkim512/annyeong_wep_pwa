@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { maskEmail } from '@/lib/utils/maskEmail';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
 interface FindIdModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface FindIdModalProps {
 
 export default function FindIdModal({ isOpen, onClose }: FindIdModalProps) {
   const { t } = useTranslation('common');
+  useBodyScrollLock(isOpen);
   const [nickname, setNickname] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -64,7 +66,7 @@ export default function FindIdModal({ isOpen, onClose }: FindIdModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm overscroll-none flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-md w-full p-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-4">

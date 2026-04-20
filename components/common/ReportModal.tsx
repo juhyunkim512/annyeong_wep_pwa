@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useTranslation } from 'react-i18next';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ export default function ReportModal({
   onLoginRequired,
 }: ReportModalProps) {
   const { t } = useTranslation('common');
+  useBodyScrollLock(isOpen);
   const REPORT_REASONS = [
     t('report.reasons.hate'),
     t('report.reasons.sexual'),
@@ -123,7 +125,7 @@ export default function ReportModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm overscroll-none flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="border-b border-gray-200 p-5 flex justify-between items-center flex-shrink-0">

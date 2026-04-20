@@ -114,13 +114,13 @@
     "searchPlaceholder": "Search posts...",
     "categories": {
       "all": "All Posts",
-      "food": "Food 🍚",
-      "housing": "Housing 🏠",
-      "school": "School 🏫",
-      "job": "Job 👨‍💻",
-      "hospital": "Hospital 🏥",
-      "info": "Info 💁",
-      "free": "Free 🍀"
+      "food": "Food",
+      "housing": "Housing",
+      "school": "School",
+      "job": "Job",
+      "hospital": "Hospital",
+      "info": "Info",
+      "free": "Free"
     }
   },
   "home": {
@@ -218,7 +218,17 @@
     "deleting": "Deleting...",
     "deleteSuccess": "Account deleted. Goodbye!",
     "deletePasswordWrong": "Incorrect password.",
-    "deleteFailed": "Account deletion failed. Please try again."
+    "deleteFailed": "Account deletion failed. Please try again.",
+    "nicknameChangeConfirmTitle": "Change Nickname?",
+    "nicknameChangeConfirmDesc": "Nicknames can only be changed once every 30 days.",
+    "nicknameChanging": "Changing nickname...",
+    "nicknameChanged": "Nickname changed successfully!",
+    "nicknameAlreadyInUse": "This nickname is already in use.",
+    "nicknameChangeCooldown": "You can only change your nickname once every 30 days.",
+    "nicknameNextAvailable": "Next available date",
+    "nicknameInvalid": "Nickname must be 3-15 characters using lowercase letters, numbers, or _ only.",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
   },
   "friends": {
     "title": "Friends",
@@ -597,7 +607,19 @@
       "fillRequired": "Please fill in all required fields.",
       "failed": "Failed to create gathering.",
       "selectLocation": "Select a location",
-      "tapToSelectLocation": "Tap the map to select a location"
+      "tapToSelectLocation": "Tap the map to select a location",
+      "dateLabel": "Date",
+      "timeLabel": "Time",
+      "locationLabel": "Location",
+      "customSelect": "Custom",
+      "mapSelectTitle": "Select Location",
+      "am": "AM",
+      "pm": "PM",
+      "pastTimeError": "Past or current time cannot be selected.",
+      "confirmLocation": "Select this location",
+      "locationSelected": "✓ Selected",
+      "mapUnavailable": "Map is unavailable",
+      "contactAdmin": "Please contact admin"
     },
     "categories": {
       "language": "Language Exchange 🗣️",

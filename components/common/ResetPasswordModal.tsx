@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
 type ResetStep = 1 | 2 | 3 | 4;
 
@@ -17,6 +18,7 @@ export default function ResetPasswordModal({
   onClose,
 }: ResetPasswordModalProps) {
   const { t } = useTranslation('common');
+  useBodyScrollLock(isOpen);
   const [step, setStep] = useState<ResetStep>(1);
   const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
@@ -149,7 +151,7 @@ export default function ResetPasswordModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm overscroll-none flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-md w-full p-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
