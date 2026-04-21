@@ -31,10 +31,9 @@ export default function DashboardLayout({
 
   // 로그인 상태 추적
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('[auth-sync] getSession result — session exists:', !!session, 'user id:', session?.user?.id ?? 'null')
-      setIsLoggedIn(!!session)
-    })
+    // getSession() 대신 onAuthStateChange 사용:
+    // getSession()은 토큰 만료 시 리프레시 HTTP 요청을 날리는데 이 요청이 hang → 무한 로딩
+    // INITIAL_SESSION은 네트워크 없이 즉시 발화
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('[auth-sync] onAuthStateChange event:', event, 'session exists:', !!session, 'user id:', session?.user?.id ?? 'null')
       setIsLoggedIn(!!session)

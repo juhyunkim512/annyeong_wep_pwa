@@ -77,10 +77,6 @@ export default function HomePage() {
     const reqId = ++reqRef.current
     const controller = new AbortController()
     const fetchData = async () => {
-      // 세션 상태 디버그 로그
-      const { data: { session: dbgSession } } = await supabase.auth.getSession()
-      console.log('[home] session exists:', !!dbgSession, 'user id:', dbgSession?.user?.id ?? 'null')
-
       setPostsLoading(true)
       setGatherLoading(true)
       try {

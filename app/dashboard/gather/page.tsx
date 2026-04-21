@@ -60,9 +60,10 @@ export default function GatherPage() {
   const [translatedLocations, setTranslatedLocations] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsLoggedIn(!!session);
     });
+    return () => subscription.unsubscribe();
   }, []);
 
   // ── community와 동일한 batchTranslate 기반 번역 헬퍼 ──
