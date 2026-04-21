@@ -28,6 +28,7 @@ export default function DashboardLayout({
   const [isLoginOpen, setIsLoginOpen] = useState(false)
   const [isSignupOpen, setIsSignupOpen] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   // 로그인 상태 추적
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function DashboardLayout({
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('[auth-sync] onAuthStateChange event:', event, 'session exists:', !!session, 'user id:', session?.user?.id ?? 'null')
       setIsLoggedIn(!!session)
+      setCurrentUserId(session?.user?.id ?? null)
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -95,9 +97,8 @@ export default function DashboardLayout({
 
   useEffect(() => {
     const fetchUnread = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      const uid = session.user.id
+      const uid = currentUserId
+      if (!uid) return
 
       const { data: directRooms } = await supabase
         .from('chat_room')
@@ -178,7 +179,7 @@ export default function DashboardLayout({
       window.removeEventListener('focus', handler)
       window.removeEventListener('unreadUpdate', handler)
     }
-  }, [pathname])
+  }, [pathname, currentUserId])
 
   // isChatRoom은 위에서 이미 선언됨
 
