@@ -1,6 +1,6 @@
 {
   "nav": {
-    "main": "Main",
+    "main": "Home",
     "community": "Community",
     "services": "Foreigner Services",
     "help": "Help",
@@ -130,6 +130,11 @@
     "noTrendingPosts": "No trending posts right now.",
     "viewAll": "View all →",
     "banners": {
+      "banner1": {
+        "title": "❗️ Use it like an app in 30 seconds ❗️",
+        "desc": "Faster and more convenient to use",
+        "cta": "→ Set up now →"
+      },
       "policy": {
         "title": "Support Policies for Foreigners",
         "desc": "2026 New Policies and Funding Information"
@@ -647,5 +652,16 @@
       "expired": "This chat has expired as the meeting time has passed.",
       "expiresAt": "Temporary chat open until {{time}}"
     }
+  },
+  "onboarding": {
+    "setNickname": "Choose your nickname",
+    "checkDuplicate": "Check",
+    "checking": "Checking...",
+    "nicknameAvailable": "This nickname is available.",
+    "nicknameUnavailable": "This nickname is unavailable.",
+    "checkError": "An error occurred. Please try again.",
+    "saving": "Saving...",
+    "start": "Get Started",
+    "saveFailed": "Failed to save. Please try again."
   }
 }

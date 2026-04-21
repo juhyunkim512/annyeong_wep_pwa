@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import SignupModal from '@/components/common/SignupModal';
 import LoginModal from '@/components/common/LoginModal';
+import AuthSelectSheet from '@/components/common/AuthSelectSheet';
 import Link from 'next/link';
 import AvatarImage from '@/components/common/AvatarImage';
 import { useTranslation } from 'react-i18next';
@@ -25,9 +27,11 @@ const getFlagEmoji = (v?: string) => FLAG_EMOJI_MAP[v || ''] || '';
 export default function MyPagePage() {
   const [isSignupOpen, setIsSignupOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isAuthSheetOpen, setIsAuthSheetOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  const router = useRouter();
   const { t } = useTranslation('common');
 
   const MENU_ITEMS = [
@@ -39,88 +43,105 @@ export default function MyPagePage() {
     { icon: '/icons/setting.png', label: t('myPage.settings'), desc: t('myPage.settingsDesc'), href: '/dashboard/my-page/settings' },
   ];
 
-
-  // request id ref: 최신 요청만 상태 반영
-  const reqRef = useRef(0);
-
   useEffect(() => {
-    const reqId = ++reqRef.current;
-    const init = async () => {
-      setLoading(true);
+    let cancelled = false;
+
+    const loadProfile = async (session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']) => {
+      if (cancelled) return;
+      if (!session) {
+        setIsLoggedIn(false);
+        setIsAuthSheetOpen(true); // 비로그인 → 로그인 선택 시트 자동 오픈
+        setLoading(false);
+        return;
+      }
+      console.log('[my-page] session exists: true, user id:', session.user.id);
+      setIsLoggedIn(true);
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (reqRef.current !== reqId) return;
-        if (!session) {
-          setIsLoggedIn(false);
-          // session 없음 → return 후 finally에서 loading 종료
-          return;
-        }
-        setIsLoggedIn(true);
         const { data: profileData, error } = await supabase
           .from('profile')
           .select('nickname, flag, uselanguage, image_url')
           .eq('id', session.user.id)
-          .single();
-        if (reqRef.current !== reqId) return;
-        if (error) {
-          console.error('[MyPage] profile fetch error:', error);
-        }
+          .maybeSingle();
+        if (cancelled) return;
+        if (error) console.error('[MyPage] profile fetch error:', error);
         setProfile(profileData ?? null);
       } catch (err) {
-        if (reqRef.current !== reqId) return;
-        console.error('[MyPage] init exception:', err);
+        if (!cancelled) console.error('[MyPage] init exception:', err);
       } finally {
-        // 최신 요청만 loading 종료 — 비로그인 early return 포함 모든 경로에서 실행
-        if (reqRef.current === reqId) setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
-    init();
+
+    // getSession() 대신 onAuthStateChange(INITIAL_SESSION) 사용:
+    // getSession()은 토큰 만료 시 내부적으로 리프레시 HTTP 요청을 날리는데
+    // 이 요청이 행(hang)하면 Promise가 영원히 pending → 무한 로딩 발생.
+    // INITIAL_SESSION 이벤트는 네트워크 없이 즉시 발화하므로 안전.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') {
+        loadProfile(session);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsLoggedIn(false);
     setProfile(null);
+    router.push('/dashboard/home');
+  };
+
+  const handleAuthSheetClose = () => {
+    setIsAuthSheetOpen(false);
+  };
+
+  const handleLoginClick = () => {
+    setIsAuthSheetOpen(false);
+    setIsLoginOpen(true);
+  };
+
+  const handleSignupClick = () => {
+    setIsAuthSheetOpen(false);
+    setIsSignupOpen(true);
   };
 
   return (
     <div className="max-w-4xl space-y-6">
       <h1 className="text-2xl font-bold mt-4 text-gray-800">{t('myPage.title')}</h1>
 
-      {/* Profile Card */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <AvatarImage src={profile?.image_url} size={64} />
-          <div className="flex-1">
-            {loading ? (
-              <p className="text-gray-400 text-sm">{t('common.loading')}</p>
-            ) : isLoggedIn && profile ? (
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-gray-900 font-semibold text-lg">{profile.nickname}</p>
-                  {profile.flag && <span className="text-xl">{getFlagEmoji(profile.flag)}</span>}
+      {/* Profile Card — 로그인 상태일 때만 렌더링 */}
+      {(loading || isLoggedIn) && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <div className="flex items-center gap-4 mb-6">
+            <AvatarImage src={profile?.image_url} size={64} />
+            <div className="flex-1">
+              {loading ? (
+                <p className="text-gray-400 text-sm">{t('common.loading')}</p>
+              ) : isLoggedIn && profile ? (
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-gray-900 font-semibold text-lg">{profile.nickname}</p>
+                    {profile.flag && <span className="text-xl">{getFlagEmoji(profile.flag)}</span>}
+                  </div>
+                  {profile.uselanguage && <p className="text-gray-500 text-sm capitalize">{profile.uselanguage}</p>}
                 </div>
-                {profile.uselanguage && <p className="text-gray-500 text-sm capitalize">{profile.uselanguage}</p>}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm">{t('myPage.signInPrompt')}</p>
-            )}
+              ) : null}
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            {loading ? (
+              <button disabled className="flex-1 bg-gray-200 text-white py-3 rounded-lg font-semibold cursor-not-allowed">{t('common.loading')}</button>
+            ) : isLoggedIn ? (
+              <button onClick={handleLogout} className="flex-1 bg-[#9DB8A0] text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">{t('auth.logout')}</button>
+            ) : null}
           </div>
         </div>
-
-        <div className="flex gap-3">
-          {loading ? (
-            <button disabled className="flex-1 bg-gray-200 text-white py-3 rounded-lg font-semibold cursor-not-allowed">{t('common.loading')}</button>
-          ) : isLoggedIn ? (
-            <button onClick={handleLogout} className="flex-1 bg-[#9DB8A0] text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">{t('auth.logout')}</button>
-          ) : (
-            <>
-              <button onClick={() => setIsLoginOpen(true)} className="flex-1 bg-[#9DB8A0] text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">{t('auth.login')}</button>
-              <button onClick={() => setIsSignupOpen(true)} className="flex-1 bg-white text-[#9DB8A0] border-2 border-[#9DB8A0] py-3 rounded-lg font-semibold hover:bg-[#9DB8A0]/5 transition">{t('auth.signUp')}</button>
-            </>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Menu Items — 로그인한 경우만 */}
       {isLoggedIn && (
@@ -139,6 +160,15 @@ export default function MyPagePage() {
             </Link>
           ))}
         </div>
+      )}
+
+      {/* 로그인 선택 시트 (비로그인 시 자동 노출) */}
+      {isAuthSheetOpen && (
+        <AuthSelectSheet
+          onClose={handleAuthSheetClose}
+          onLoginClick={handleLoginClick}
+          onSignupClick={handleSignupClick}
+        />
       )}
 
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />

@@ -1,6 +1,6 @@
 {
   "nav": {
-    "main": "메인",
+    "main": "홈",
     "community": "커뮤니티",
     "services": "외국인 서비스",
     "help": "도움말",
@@ -130,6 +130,11 @@
     "noTrendingPosts": "지금 인기 게시글이 없습니다.",
     "viewAll": "더 보기 →",
     "banners": {
+      "banner1": {
+        "title": "❗️ 30초 만에 앱처럼 사용하세요 ❗️",
+        "desc": "더 빠르고 편리하게",
+        "cta": "→ 지금 설정하기 →"
+      },
       "policy": {
         "title": "외국인 지원 정책",
         "desc": "2026 새 정책 및 지원 정보"
@@ -178,7 +183,6 @@
     "resetPasswordTitle": "비밀번호 재설정",
     "chooseLanguage": "언어 선택",
     "chooseLanguageDesc": "선호하는 언어를 선택하세요",
-    "chooseLanguageHint": "번역 및 설정에 사용할 언어를 선택하세요.",
     "confirmSelection": "선택 완료",
     "languageUpdated": "언어가 변경되었습니다!",
     "saving": "저장 중...",
@@ -647,5 +651,16 @@
       "expired": "이 단톡방은 약속 시간이 지나 종료되었습니다.",
       "expiresAt": "{{time}}까지 열려있는 임시 단톡방입니다"
     }
+  },
+  "onboarding": {
+    "setNickname": "닉네임을 정해주세요",
+    "checkDuplicate": "중복 확인",
+    "checking": "확인 중...",
+    "nicknameAvailable": "사용 가능한 닉네임입니다.",
+    "nicknameUnavailable": "사용할 수 없는 닉네임입니다.",
+    "checkError": "확인 중 오류가 발생했습니다.",
+    "saving": "저장 중...",
+    "start": "시작하기",
+    "saveFailed": "저장에 실패했습니다. 다시 시도해 주세요."
   }
 }

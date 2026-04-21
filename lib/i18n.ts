@@ -25,7 +25,7 @@ export const LANG_LABELS: Record<AppLang, string> = {
  * 예: "english" → "en", "korean" → "ko"
  */
 export function normalizeDbLang(value: string | undefined | null): AppLang {
-  if (!value) return 'en';
+  if (!value) return 'ko';
   const lower = value.toLowerCase();
   const map: Record<string, AppLang> = {
     english: 'en',
@@ -54,8 +54,8 @@ if (!i18n.isInitialized) {
       es: { common: es },
       vi: { common: vi },
     },
-    lng: 'en',
-    fallbackLng: 'en',
+    lng: 'ko',
+    fallbackLng: 'ko',
     defaultNS: 'common',
     ns: ['common'],
     interpolation: { escapeValue: false },

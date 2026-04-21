@@ -1,12 +1,41 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   // Get user's preferred language from cookie or browser settings
   const language = request.cookies.get('language')?.value || 'ko'
-  
-  const response = NextResponse.next()
+
+  let response = NextResponse.next({
+    request,
+  })
   response.headers.set('x-user-language', language)
-  
+
+  // Refresh Supabase session so server components / route handlers can read it
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
+          response = NextResponse.next({ request })
+          response.headers.set('x-user-language', language)
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  // Calling getUser() triggers session refresh and writes updated cookies
+  await supabase.auth.getUser()
+
   return response
 }
 

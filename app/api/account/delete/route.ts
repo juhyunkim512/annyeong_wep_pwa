@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient } from '@supabase/supabase-js';
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,24 +17,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { password, reason } = await req.json();
-    if (!password) {
-      return NextResponse.json({ error: 'Password required' }, { status: 400 });
-    }
-
-    // Re-verify password using a fresh anonymous Supabase client
-    const anonClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
-    const { error: signInError } = await anonClient.auth.signInWithPassword({
-      email: user.email!,
-      password,
-    });
-    if (signInError) {
-      return NextResponse.json({ error: 'wrong_password' }, { status: 401 });
-    }
+    const { reason } = await req.json();
 
     // Insert delete log
     await admin.from('user_delete_log').insert({

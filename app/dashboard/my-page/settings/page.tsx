@@ -14,7 +14,6 @@ export default function SettingsPage() {
   // [수정] 언어 선택 항목 제거 — 유저가 변경 못하도록
   const SETTINGS_ITEMS = [
     { icon: '/icons/camera.png', label: t('settings.editProfile'), desc: t('settings.editProfileDesc'), href: '/dashboard/my-page/settings/profile' },
-    { icon: '/icons/password.png', label: t('settings.resetPassword'), desc: t('settings.resetPasswordDesc'), href: '/dashboard/my-page/settings/password' },
   ];
 
   return (

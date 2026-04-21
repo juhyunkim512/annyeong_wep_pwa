@@ -130,6 +130,11 @@
     "noTrendingPosts": "No hay publicaciones populares ahora.",
     "viewAll": "Ver todo →",
     "banners": {
+      "banner1": {
+        "title": "❗️ Úsalo como una app en 30 segundos ❗️",
+        "desc": "Más rápido y cómodo de usar",
+        "cta": "→ Configurar ahora →"
+      },
       "policy": {
         "title": "Políticas de apoyo para extranjeros",
         "desc": "Nuevas políticas y financiación 2026"
@@ -178,7 +183,6 @@
     "resetPasswordTitle": "Restablecer Contraseña",
     "chooseLanguage": "Elegir Idioma",
     "chooseLanguageDesc": "Elige tu idioma preferido",
-    "chooseLanguageHint": "Elige el idioma para la traducción de contenido y preferencias.",
     "confirmSelection": "Confirmar Selección",
     "languageUpdated": "¡Idioma actualizado!",
     "saving": "Guardando...",
@@ -647,5 +651,16 @@
       "expired": "Este chat ha expirado porque pasó la hora del encuentro.",
       "expiresAt": "Chat temporal abierto hasta {{time}}"
     }
+  },
+  "onboarding": {
+    "setNickname": "Elige tu apodo",
+    "checkDuplicate": "Verificar",
+    "checking": "Verificando...",
+    "nicknameAvailable": "Este apodo está disponible.",
+    "nicknameUnavailable": "Este apodo no está disponible.",
+    "checkError": "Ocurrió un error. Inténtalo de nuevo.",
+    "saving": "Guardando...",
+    "start": "Comenzar",
+    "saveFailed": "Error al guardar. Inténtalo de nuevo."
   }
 }

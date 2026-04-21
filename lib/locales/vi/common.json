@@ -130,6 +130,11 @@
     "noTrendingPosts": "Hiện không có bài viết thịnh hành.",
     "viewAll": "Xem tất cả →",
     "banners": {
+      "banner1": {
+        "title": "❗️ Dùng như app chỉ trong 30 giây ❗️",
+        "desc": "Nhanh hơn và tiện lợi hơn",
+        "cta": "→ Cài ngay →"
+      },
       "policy": {
         "title": "Chính sách hỗ trợ người nước ngoài",
         "desc": "Chính sách và thông tin tài trợ mới 2026"
@@ -178,7 +183,6 @@
     "resetPasswordTitle": "Đặt lại mật khẩu",
     "chooseLanguage": "Chọn ngôn ngữ",
     "chooseLanguageDesc": "Chọn ngôn ngữ ưa thích của bạn",
-    "chooseLanguageHint": "Chọn ngôn ngữ dùng cho dịch nội dung và cài đặt.",
     "confirmSelection": "Xác nhận lựa chọn",
     "languageUpdated": "Ngôn ngữ đã được cập nhật!",
     "saving": "Đang lưu...",
@@ -647,5 +651,16 @@
       "expired": "Nhóm chat đã hết hạn vì đã qua giờ gặp.",
       "expiresAt": "Nhóm chat tạm mở đến {{time}}"
     }
+  },
+  "onboarding": {
+    "setNickname": "Chọn biệt danh của bạn",
+    "checkDuplicate": "Kiểm tra",
+    "checking": "Đang kiểm tra...",
+    "nicknameAvailable": "Biệt danh này có thể sử dụng.",
+    "nicknameUnavailable": "Biệt danh này không thể sử dụng.",
+    "checkError": "Đã xảy ra lỗi. Vui lòng thử lại.",
+    "saving": "Đang lưu...",
+    "start": "Bắt đầu",
+    "saveFailed": "Lưu thất bại. Vui lòng thử lại."
   }
 }

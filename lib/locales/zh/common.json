@@ -130,6 +130,11 @@
     "noTrendingPosts": "目前没有热门帖子。",
     "viewAll": "查看全部 →",
     "banners": {
+      "banner1": {
+        "title": "❗️ 30秒像APP一样使用 ❗️",
+        "desc": "更快速、更方便",
+        "cta": "→ 立即设置 →"
+      },
       "policy": {
         "title": "外国人支持政策",
         "desc": "2026年新政策和资金信息"
@@ -178,7 +183,6 @@
     "resetPasswordTitle": "重置密码",
     "chooseLanguage": "选择语言",
     "chooseLanguageDesc": "选择您偏好的语言",
-    "chooseLanguageHint": "选择用于内容翻译和偏好设置的语言。",
     "confirmSelection": "确认选择",
     "languageUpdated": "语言已更新！",
     "saving": "保存中...",
@@ -647,5 +651,16 @@
       "expired": "见面时间已过，此群聊已结束。",
       "expiresAt": "临时群聊开放至{{time}}"
     }
+  },
+  "onboarding": {
+    "setNickname": "请设置昵称",
+    "checkDuplicate": "检查重复",
+    "checking": "检查中...",
+    "nicknameAvailable": "此昵称可以使用。",
+    "nicknameUnavailable": "此昵称不可使用。",
+    "checkError": "检查时出错，请重试。",
+    "saving": "保存中...",
+    "start": "开始",
+    "saveFailed": "保存失败，请重试。"
   }
 }

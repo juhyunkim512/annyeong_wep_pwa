@@ -7,13 +7,33 @@ import { supabase } from '@/lib/supabase/client';
 import '@/lib/i18n';
 import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
+async function signInWithOAuthProvider(provider: 'google' | 'kakao') {
+  console.log(`[${provider}-login] click`);
+  const redirectTo = `${window.location.origin}/auth/callback`;
+  console.log(`[${provider}-login] signInWithOAuth start, redirectTo:`, redirectTo);
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo,
+      queryParams: provider === 'kakao'
+        ? { prompt: 'login' }           // 카카오: 매번 로그인 화면 강제 표시
+        : { prompt: 'select_account' }, // Google: 계정 선택 화면 표시
+    },
+  });
+  console.log(`[${provider}-login] signInWithOAuth returned, error:`, error?.message ?? 'none');
+  if (error) {
+    console.error(`[SignupModal] ${provider} OAuth error:`, error);
+    return error.message;
+  }
+  // success: browser will redirect to Google/Kakao — no further action needed
+  return null;
+}
+
 interface SignupFormData {
   email: string;
   password: string;
   nickname: string;
   flag: string;
-  purpose: 'community' | 'service' | 'information';
-  current_status: 'living_in_korea' | 'planning_to_move';
   gender: 'male' | 'female';
 }
 
@@ -51,8 +71,6 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
     password: '',
     nickname: '',
     flag: 'korea',
-    purpose: 'community',
-    current_status: 'living_in_korea',
     gender: 'male',
   });
 
@@ -84,8 +102,19 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
   const [verifyingOtp, setVerifyingOtp] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'kakao' | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const handleOAuth = async (provider: 'google' | 'kakao') => {
+    setError('');
+    setOauthLoading(provider);
+    const err = await signInWithOAuthProvider(provider);
+    if (err) {
+      setError(err);
+      setOauthLoading(null);
+    }
+  };
   const [checkedFields, setCheckedFields] = useState({
     nickname: false,
   });
@@ -127,7 +156,7 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
     }
   };
 
-  const handleToggle = (field: 'purpose' | 'current_status', value: string) => {
+  const handleToggle = (field: 'gender', value: string) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value as any,
@@ -303,8 +332,6 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
           password: formData.password,
           nickname: formData.nickname,
           flag: formData.flag,
-          purpose: formData.purpose,
-          current_status: formData.current_status,
           gender: formData.gender,
         }),
       });
@@ -330,8 +357,6 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
           password: '',
           nickname: '',
           flag: 'korea',
-          purpose: 'community',
-          current_status: 'living_in_korea',
           gender: 'male',
         });
         setValidationStatus({ nickname: null });
@@ -490,50 +515,6 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
             </select>
           </div>
 
-          {/* Purpose */}
-          <div>
-            <label className="block text-sm font-semibold mb-2">{t('signup.purpose')}</label>
-            <div className="flex gap-2 flex-wrap">
-              {PURPOSE_OPTIONS.map((item) => (
-                <button
-                  key={item.value}
-                  type="button"
-                  onClick={() => handleToggle('purpose', item.value)}
-                  disabled={loading}
-                  className={`px-4 py-2 rounded-lg font-medium transition ${
-                    formData.purpose === item.value
-                      ? 'bg-[#9DB8A0] text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  } disabled:opacity-50`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Current Status */}
-          <div>
-            <label className="block text-sm font-semibold mb-2">{t('signup.status')}</label>
-            <div className="flex gap-2 flex-wrap">
-              {STATUS_OPTIONS.map((item) => (
-                <button
-                  key={item.value}
-                  type="button"
-                  onClick={() => handleToggle('current_status', item.value)}
-                  disabled={loading}
-                  className={`px-4 py-2 rounded-lg font-medium transition ${
-                    formData.current_status === item.value
-                      ? 'bg-[#9DB8A0] text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  } disabled:opacity-50`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Gender */}
           <div>
             <label className="block text-sm font-semibold mb-2">{t('signup.gender')}</label>
@@ -584,6 +565,40 @@ export default function SignupModal({ isOpen, onClose }: SignupModalProps) {
             className="w-full text-gray-600 py-2 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
           >
             {t('common.cancel')}
+          </button>
+
+          {/* ── Social Login ── */}
+          <div className="relative flex items-center gap-3 py-1">
+            <div className="flex-1 border-t border-gray-200" />
+            <span className="text-xs text-gray-400 shrink-0">또는 소셜로 빠르게 시작</span>
+            <div className="flex-1 border-t border-gray-200" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => handleOAuth('google')}
+            disabled={!!oauthLoading || loading}
+            className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg py-3 font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition"
+          >
+            <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
+              <path d="M44.5 20H24v8.5h11.8C34.7 33.9 29.9 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6-6C34.6 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21c10.5 0 20-7.6 20-21 0-1.3-.2-2.7-.5-4z" fill="#FFC107"/>
+              <path d="M6.3 14.7l7 5.1C15.1 16.1 19.2 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6-6C34.6 5.1 29.6 3 24 3 16.3 3 9.7 7.9 6.3 14.7z" fill="#FF3D00"/>
+              <path d="M24 45c5.5 0 10.5-1.9 14.4-5.1l-6.7-5.7C29.5 35.9 26.9 37 24 37c-5.8 0-10.7-3.9-12.4-9.3l-7 5.4C8 39.6 15.4 45 24 45z" fill="#4CAF50"/>
+              <path d="M44.5 20H24v8.5h11.8c-.8 2.3-2.4 4.3-4.4 5.7l6.7 5.7C42 36.5 45 31 45 24c0-1.3-.2-2.7-.5-4z" fill="#1976D2"/>
+            </svg>
+            {oauthLoading === 'google' ? '연결 중...' : 'Google로 계속하기'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleOAuth('kakao')}
+            disabled={!!oauthLoading || loading}
+            className="w-full flex items-center justify-center gap-3 bg-[#FEE500] rounded-lg py-3 font-medium text-[#191919] hover:brightness-95 disabled:opacity-50 transition"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#191919">
+              <path d="M12 3C6.477 3 2 6.477 2 10.846c0 2.73 1.618 5.13 4.073 6.618l-.83 3.088a.25.25 0 0 0 .384.272L9.45 18.61A11.5 11.5 0 0 0 12 18.69c5.523 0 10-3.477 10-7.846S17.523 3 12 3z"/>
+            </svg>
+            {oauthLoading === 'kakao' ? '연결 중...' : '카카오로 계속하기'}
           </button>
         </form>
       </div>

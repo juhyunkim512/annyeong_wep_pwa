@@ -12,7 +12,7 @@ interface DeleteAccountModalProps {
   onClose: () => void;
 }
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2;
 
 export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps) {
   const router = useRouter();
@@ -20,18 +20,16 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
   useBodyScrollLock(isOpen);
 
   const [step, setStep] = useState<Step>(1);
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [reason, setReason] = useState('');
+  const [confirmText, setConfirmText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const reset = () => {
     setStep(1);
-    setPassword('');
     setReason('');
+    setConfirmText('');
     setError('');
-    setShowPassword(false);
     setLoading(false);
   };
 
@@ -42,15 +40,8 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
 
   const handleStep1 = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!password) return;
     setError('');
     setStep(2);
-  };
-
-  const handleStep2 = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setStep(3);
   };
 
   const handleConfirmDelete = async () => {
@@ -71,21 +62,14 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ password, reason }),
+        body: JSON.stringify({ reason }),
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        if (data.error === 'wrong_password') {
-          setError(t('settings.deletePasswordWrong'));
-          setStep(1);
-        } else {
-          setError(t('settings.deleteFailed'));
-        }
+        setError(t('settings.deleteFailed'));
         return;
       }
 
-      // Success: sign out and redirect
       await supabase.auth.signOut();
       handleClose();
       router.push('/');
@@ -98,12 +82,6 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
 
   if (!isOpen) return null;
 
-  const stepTitles: Record<Step, string> = {
-    1: t('settings.deleteStep1Title'),
-    2: t('settings.deleteStep2Title'),
-    3: t('settings.deleteStep3Title'),
-  };
-
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm overscroll-none flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-md w-full shadow-xl">
@@ -111,7 +89,9 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
         <div className="border-b border-gray-200 p-6 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-bold text-red-600">{t('settings.deleteAccount')}</h2>
-            <p className="text-sm text-gray-500 mt-0.5">{stepTitles[step]}</p>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {step === 1 ? t('settings.deleteStep2Title') : t('settings.deleteStep3Title')}
+            </p>
           </div>
           <button
             onClick={handleClose}
@@ -126,7 +106,7 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
         <div className="p-6 space-y-4">
           {/* Step indicator */}
           <div className="flex gap-2 mb-4">
-            {([1, 2, 3] as Step[]).map((s) => (
+            {([1, 2] as Step[]).map((s) => (
               <div
                 key={s}
                 className={`flex-1 h-1.5 rounded-full transition-colors ${
@@ -136,51 +116,9 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
             ))}
           </div>
 
-          {/* Step 1: Password */}
+          {/* Step 1: Reason */}
           {step === 1 && (
             <form onSubmit={handleStep1} className="space-y-4">
-              <p className="text-sm text-gray-600">{t('settings.deleteAccountDesc')}</p>
-              <div>
-                <label className="block text-sm font-semibold mb-2">{t('auth.password')}</label>
-                <div className="relative flex items-center">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => { setPassword(e.target.value); setError(''); }}
-                    placeholder="••••••••"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300"
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 text-gray-500 hover:text-gray-700"
-                  >
-                    {showPassword ? '👁️' : '👁️‍🗨️'}
-                  </button>
-                </div>
-              </div>
-              {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-              <button
-                type="submit"
-                disabled={!password}
-                className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 disabled:opacity-50 transition"
-              >
-                {t('common.next') ?? 'Next'}
-              </button>
-              <button
-                type="button"
-                onClick={handleClose}
-                className="w-full text-gray-600 py-2 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition"
-              >
-                {t('common.cancel')}
-              </button>
-            </form>
-          )}
-
-          {/* Step 2: Reason */}
-          {step === 2 && (
-            <form onSubmit={handleStep2} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold mb-2">{t('settings.deleteStep2Title')}</label>
                 <textarea
@@ -199,22 +137,40 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
               </button>
               <button
                 type="button"
-                onClick={() => { setStep(1); setError(''); }}
+                onClick={handleClose}
                 className="w-full text-gray-600 py-2 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 transition"
               >
-                {t('common.prev') ?? 'Back'}
+                {t('common.cancel')}
               </button>
             </form>
           )}
 
-          {/* Step 3: Confirm */}
-          {step === 3 && (
+          {/* Step 2: Confirm with "delete" typing */}
+          {step === 2 && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-700 leading-relaxed">{t('settings.deleteConfirmText')}</p>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-gray-900">정말 탈퇴하시겠습니까?</p>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  한번 탈퇴하면 같은 구글 계정으로는 다시 가입 할 수 없습니다.
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">
+                  확인을 위해 <span className="text-red-500 font-mono">delete</span> 를 입력하세요
+                </label>
+                <input
+                  type="text"
+                  value={confirmText}
+                  onChange={(e) => { setConfirmText(e.target.value); setError(''); }}
+                  placeholder="delete"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 text-sm font-mono"
+                  autoFocus
+                />
+              </div>
               {error && <p className="text-sm text-red-600 text-center">{error}</p>}
               <button
                 onClick={handleConfirmDelete}
-                disabled={loading}
+                disabled={confirmText !== 'delete' || loading}
                 className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 transition"
               >
                 {loading ? t('settings.deleting') : t('settings.deleteBtn')}
@@ -222,7 +178,7 @@ export default function DeleteAccountModal({ isOpen, onClose }: DeleteAccountMod
               <button
                 type="button"
                 disabled={loading}
-                onClick={() => { setStep(2); setError(''); }}
+                onClick={() => { setStep(1); setError(''); setConfirmText(''); }}
                 className="w-full text-gray-600 py-2 rounded-lg font-medium border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition"
               >
                 {t('common.prev') ?? 'Back'}

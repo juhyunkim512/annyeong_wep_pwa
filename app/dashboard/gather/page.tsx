@@ -5,7 +5,9 @@ import { supabase } from '@/lib/supabase/client';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
 import AvatarImage from '@/components/common/AvatarImage';
+import AuthSelectSheet from '@/components/common/AuthSelectSheet';
 import LoginModal from '@/components/common/LoginModal';
+import SignupModal from '@/components/common/SignupModal';
 import WriteGatherModal from '@/components/gather/WriteGatherModal';
 import GatherDetailModal from '@/components/gather/GatherDetailModal';
 import { GatherMapView } from '@/components/gather/GatherMap';
@@ -47,7 +49,9 @@ export default function GatherPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [isWriteOpen, setIsWriteOpen] = useState(false);
+  const [isAuthSheetOpen, setIsAuthSheetOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isSignupOpen, setIsSignupOpen] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
@@ -181,7 +185,7 @@ export default function GatherPage() {
 
   const handleWriteClick = () => {
     if (!isLoggedIn) {
-      setIsLoginOpen(true);
+      setIsAuthSheetOpen(true);
     } else {
       setIsWriteOpen(true);
     }
@@ -229,12 +233,18 @@ export default function GatherPage() {
             <h2 className="text-lg font-bold mb-4">{t('auth.loginRequiredDesc')}</h2>
             <button
               className="bg-[#9DB8A0] text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90"
-              onClick={() => setIsLoginOpen(true)}
+              onClick={() => setIsAuthSheetOpen(true)}
             >
               {t('auth.login')}
             </button>
           </div>
-          <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+          {isAuthSheetOpen && (
+            <AuthSelectSheet
+              onClose={() => setIsAuthSheetOpen(false)}
+              onLoginClick={() => { setIsAuthSheetOpen(false); setIsLoginOpen(true); }}
+              onSignupClick={() => { setIsAuthSheetOpen(false); setIsSignupOpen(true); }}
+            />
+          )}
         </div>
       ) : null}
 
@@ -312,16 +322,24 @@ export default function GatherPage() {
       <WriteGatherModal
         isOpen={isWriteOpen}
         onClose={() => { setIsWriteOpen(false); setRefreshCount((c) => c + 1); }}
-        onRequireLogin={() => { setIsWriteOpen(false); setIsLoginOpen(true); }}
+        onRequireLogin={() => { setIsWriteOpen(false); setIsAuthSheetOpen(true); }}
       />
       <GatherDetailModal
         postId={selectedPostId}
         isOpen={isDetailOpen}
         onClose={() => { setIsDetailOpen(false); setSelectedPostId(null); }}
-        onRequireLogin={() => { setIsDetailOpen(false); setIsLoginOpen(true); }}
+        onRequireLogin={() => { setIsDetailOpen(false); setIsAuthSheetOpen(true); }}
         onChanged={() => setRefreshCount((c) => c + 1)}
       />
+      {isAuthSheetOpen && (
+        <AuthSelectSheet
+          onClose={() => setIsAuthSheetOpen(false)}
+          onLoginClick={() => { setIsAuthSheetOpen(false); setIsLoginOpen(true); }}
+          onSignupClick={() => { setIsAuthSheetOpen(false); setIsSignupOpen(true); }}
+        />
+      )}
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      <SignupModal isOpen={isSignupOpen} onClose={() => setIsSignupOpen(false)} />
     </div>
   );
 }

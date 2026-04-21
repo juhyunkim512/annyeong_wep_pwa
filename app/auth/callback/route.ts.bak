@@ -1,0 +1,91 @@
+import { NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+export async function GET(request: Request) {
+  console.log('[callback] mounted')
+
+  const { searchParams, origin } = new URL(request.url)
+  const code = searchParams.get('code')
+  const errorParam = searchParams.get('error')
+
+  console.log('[callback] code exists:', !!code)
+  if (errorParam) {
+    console.error('[callback] OAuth error param:', errorParam, searchParams.get('error_description'))
+  }
+
+  if (!code) {
+    console.log('[callback] no code param → /dashboard/home')
+    return NextResponse.redirect(`${origin}/dashboard/home`)
+  }
+
+  const cookieStore = await cookies()
+
+  // 세션 쿠키를 명시적으로 캡처 — NextResponse.redirect()에 직접 붙이기 위함
+  const pendingCookies: Array<{ name: string; value: string; options: Record<string, unknown> }> = []
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          // 1) 이 핸들러 내부에서 이후 getSession/getUser가 읽을 수 있도록 cookieStore에도 기록
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // 읽기 전용 환경(Edge runtime)에서는 무시 — pendingCookies가 실제 전달 수단
+          }
+          // 2) redirect response에 붙일 쿠키 목록 캡처
+          pendingCookies.push(...cookiesToSet)
+        },
+      },
+    }
+  )
+
+  // PKCE code exchange — PKCE verifier는 createBrowserClient 덕분에 쿠키에 저장됨
+  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+  if (exchangeError) {
+    console.error('[callback] exchange failed:', exchangeError.message)
+    return NextResponse.redirect(`${origin}/dashboard/home`)
+  }
+  console.log('[callback] exchange success')
+
+  const { data: { session } } = await supabase.auth.getSession()
+  console.log('[callback] session exists:', !!session)
+
+  const { data: { user } } = await supabase.auth.getUser()
+  console.log('[callback] user id:', user?.id ?? 'null')
+
+  if (!user) {
+    console.log('[callback] no user after exchange → /dashboard/home')
+    return NextResponse.redirect(`${origin}/dashboard/home`)
+  }
+
+  // Profile row 존재 여부만 확인 — profile은 온보딩 완료 시점에만 INSERT됨
+  const { data: profile } = await supabase
+    .from('profile')
+    .select('id')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  const redirectTarget = profile ? '/dashboard/home' : '/onboarding/country'
+  console.log('[callback] profile exists:', !!profile)
+  console.log('[callback] redirect target:', redirectTarget)
+  console.log('[callback] pending cookies to set:', pendingCookies.map((c) => c.name))
+
+  // ★ 핵심 수정: cookieStore.set()은 implicit response에만 쓰임
+  // NextResponse.redirect()는 별도 객체이므로 쿠키를 직접 attach해야 브라우저에 전달됨
+  const response = NextResponse.redirect(`${origin}${redirectTarget}`)
+  pendingCookies.forEach(({ name, value, options }) => {
+    response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2])
+  })
+
+  console.log('[callback] final redirect to:', redirectTarget)
+  return response
+}

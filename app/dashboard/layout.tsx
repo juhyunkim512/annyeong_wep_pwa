@@ -10,6 +10,9 @@ import { usePushNotification } from '@/lib/hooks/usePushNotification'
 import { usePullToRefresh } from '@/lib/hooks/usePullToRefresh'
 import RefreshIndicator from '@/components/common/RefreshIndicator'
 import { supabase } from '@/lib/supabase/client'
+import AuthSelectSheet from '@/components/common/AuthSelectSheet'
+import LoginModal from '@/components/common/LoginModal'
+import SignupModal from '@/components/common/SignupModal'
 
 const PULL_THRESHOLD = 72 // px
 
@@ -21,6 +24,50 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const router = useRouter()
   const { t } = useTranslation('common')
+  const [isAuthSheetOpen, setIsAuthSheetOpen] = useState(false)
+  const [isLoginOpen, setIsLoginOpen] = useState(false)
+  const [isSignupOpen, setIsSignupOpen] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null)
+
+  // 로그인 상태 추적
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[auth-sync] getSession result — session exists:', !!session, 'user id:', session?.user?.id ?? 'null')
+      setIsLoggedIn(!!session)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[auth-sync] onAuthStateChange event:', event, 'session exists:', !!session, 'user id:', session?.user?.id ?? 'null')
+      setIsLoggedIn(!!session)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // 로그인은 됐지만 profile 없는 "반쪽 유저" → onboarding으로 강제 이동
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event !== 'INITIAL_SESSION' && event !== 'SIGNED_IN') return
+      if (!session) return
+      console.log('[auth-sync] check-profile for user:', session.user.id)
+      const res = await fetch('/api/onboarding/check-profile')
+      const data = await res.json()
+      console.log('[auth-sync] profile exists:', data.hasProfile)
+      // session이 있는 상태에서 profile이 없으면 onboarding으로 강제 이동
+      // authenticated 조건 제거 - session 존재 자체가 인증 확인
+      if (!data.hasProfile) {
+        router.replace('/onboarding/country')
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // MyPage 탭 클릭 핸들러: 비로그인이면 로그인 모달만 띄우고 현재 페이지 유지
+  const handleMyPageClick = (e: React.MouseEvent) => {
+    if (isLoggedIn === null) return // 아직 세션 확인 중
+    if (!isLoggedIn) {
+      e.preventDefault()
+      setIsAuthSheetOpen(true)
+    }
+  }
 
   // 푸쉬 알림 구독 (로그인 상태면 자동 요청)
   usePushNotification()
@@ -180,10 +227,12 @@ export default function DashboardLayout({
         <nav className="flex-1 p-6 space-y-2">
           {menuItems.map((item) => {
             const isActive = pathname === item.href
+            const isMyPage = item.href === '/dashboard/my-page'
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={isMyPage ? handleMyPageClick : undefined}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                   isActive
                     ? 'bg-[#9DB8A0] text-white font-medium'
@@ -244,10 +293,12 @@ export default function DashboardLayout({
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 flex">
         {bottomTabItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          const isMyPage = item.href === '/dashboard/my-page'
           return (
             <Link
               key={item.href}
               href={item.href}
+              onClick={isMyPage ? handleMyPageClick : undefined}
               className={`flex-1 flex flex-col items-center justify-center pt-1 pb-8 gap-1 transition ${
                 isActive ? 'opacity-100' : 'opacity-40'
               }`}
@@ -266,6 +317,17 @@ export default function DashboardLayout({
         })}
       </nav>
       )}
+
+      {/* 비로그인 MyPage 탭 클릭 시 AuthSelectSheet */}
+      {isAuthSheetOpen && (
+        <AuthSelectSheet
+          onClose={() => setIsAuthSheetOpen(false)}
+          onLoginClick={() => { setIsAuthSheetOpen(false); setIsLoginOpen(true) }}
+          onSignupClick={() => { setIsAuthSheetOpen(false); setIsSignupOpen(true) }}
+        />
+      )}
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      <SignupModal isOpen={isSignupOpen} onClose={() => setIsSignupOpen(false)} />
     </div>
   )
 }

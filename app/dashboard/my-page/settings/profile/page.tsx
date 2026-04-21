@@ -42,7 +42,7 @@ export default function ProfileSettingsPage() {
         .from('profile')
         .select('nickname, image_url')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle();
 
       if (data) {
         setNickname(data.nickname ?? '');

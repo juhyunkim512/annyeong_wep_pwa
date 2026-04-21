@@ -50,7 +50,6 @@ interface GatherSummary {
 export default function HomePage() {
   const { t } = useTranslation('common')
   const router = useRouter()
-  const [currentBanner, setCurrentBanner] = useState(0)
   const [isGuideLangModalOpen, setIsGuideLangModalOpen] = useState(false)
 
   const timeAgo = (dateStr: string) => {
@@ -78,6 +77,10 @@ export default function HomePage() {
     const reqId = ++reqRef.current
     const controller = new AbortController()
     const fetchData = async () => {
+      // 세션 상태 디버그 로그
+      const { data: { session: dbgSession } } = await supabase.auth.getSession()
+      console.log('[home] session exists:', !!dbgSession, 'user id:', dbgSession?.user?.id ?? 'null')
+
       setPostsLoading(true)
       setGatherLoading(true)
       try {
@@ -189,20 +192,15 @@ export default function HomePage() {
     return () => controller.abort()
   }, [])
 
-  const banners = [
-    { image: '/banner1.png', isGuide: false, href: 'https://cod-clay-40439412.figma.site/', communityLink: false },
-    { image: '/banner2.png', isGuide: true, href: null, communityLink: false },
-    { image: '/banner3.png', isGuide: false, href: 'https://gauge-rope-63895960.figma.site', communityLink: false },
-  ]
+  const banner1 = { image: '/banner1.png', isGuide: false, href: 'https://cod-clay-40439412.figma.site/', communityLink: false }
 
   const handleBannerClick = () => {
-    const banner = banners[currentBanner]
-    if (banner.communityLink) {
+    if (banner1.communityLink) {
       router.push('/dashboard/community')
-    } else if (banner.isGuide) {
+    } else if (banner1.isGuide) {
       setIsGuideLangModalOpen(true)
-    } else if (banner.href) {
-      window.open(banner.href, '_blank', 'noopener,noreferrer')
+    } else if (banner1.href) {
+      window.open(banner1.href, '_blank', 'noopener,noreferrer')
     }
   }
 
@@ -211,60 +209,34 @@ export default function HomePage() {
     router.push(`/guide?lang=${code}`)
   }
 
-  const nextBanner = () => {
-    setCurrentBanner((prev) => (prev + 1) % banners.length)
-  }
-
-  const prevBanner = () => {
-    setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)
-  }
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentBanner((prev) => (prev + 1) % banners.length)
-    }, 7000)
-    return () => clearInterval(timer)
-  }, [banners.length])
-
   return (
     <div className="max-w-6xl space-y-8">
-      {/* Banner Carousel */}
+      {/* Banner */}
       <section className="relative">
         <div
           className="relative rounded-2xl overflow-hidden cursor-pointer active:opacity-90"
           onClick={handleBannerClick}
         >
           <Image
-            src={banners[currentBanner].image}
-            alt={`banner ${currentBanner + 1}`}
+            src={banner1.image}
+            alt="banner 1"
             width={1200}
             height={400}
             className="w-full object-cover"
             priority
           />
-          <button
-            onClick={(e) => { e.stopPropagation(); prevBanner() }}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-black/20 hover:bg-black/30 rounded-full w-10 h-10 flex items-center justify-center transition text-white"
-          >
-            ←
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); nextBanner() }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-black/20 hover:bg-black/30 rounded-full w-10 h-10 flex items-center justify-center transition text-white"
-          >
-            →
-          </button>
-        </div>
-        <div className="flex justify-center gap-2 mt-4">
-          {banners.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => setCurrentBanner(idx)}
-              className={`w-2 h-2 rounded-full transition ${
-                idx === currentBanner ? 'bg-[#9DB8A0] w-8' : 'bg-gray-300'
-              }`}
-            />
-          ))}
+          {/* 오른쪽 텍스트 오버레이 */}
+          <div className="absolute inset-y-0 right-0 w-1/2 flex flex-col items-start justify-center px-6 gap-2 pointer-events-none">
+            <p className="text-[#2d4a35] font-extrabold text-sm sm:text-base leading-snug drop-shadow-sm">
+              {t('home.banners.banner1.title')}
+            </p>
+            <p className="text-[#3d5c45] text-xs sm:text-sm leading-snug">
+              {t('home.banners.banner1.desc')}
+            </p>
+            <span className="pointer-events-auto mt-1 inline-block bg-[#3a5c42] text-white text-xs sm:text-sm font-semibold px-4 py-2 rounded-xl shadow">
+              {t('home.banners.banner1.cta')}
+            </span>
+          </div>
         </div>
       </section>
 

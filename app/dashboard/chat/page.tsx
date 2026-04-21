@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import AvatarImage from '@/components/common/AvatarImage';
+import AuthSelectSheet from '@/components/common/AuthSelectSheet';
 import LoginModal from '@/components/common/LoginModal';
+import SignupModal from '@/components/common/SignupModal';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
 
@@ -36,7 +38,9 @@ export default function ChatListPage() {
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [myId, setMyId] = useState<string | null>(null);
+  const [isAuthSheetOpen, setIsAuthSheetOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isSignupOpen, setIsSignupOpen] = useState(false);
   const [revealedId, setRevealedId] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string>('');
   const touchStartX = useRef<number>(0);
@@ -418,12 +422,20 @@ export default function ChatListPage() {
             <h2 className="text-lg font-bold mb-4">{t('auth.loginRequiredDesc')}</h2>
             <button
               className="bg-[#9DB8A0] text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90"
-              onClick={() => setIsLoginOpen(true)}
+              onClick={() => setIsAuthSheetOpen(true)}
             >
               {t('auth.login')}
             </button>
           </div>
+          {isAuthSheetOpen && (
+            <AuthSelectSheet
+              onClose={() => setIsAuthSheetOpen(false)}
+              onLoginClick={() => { setIsAuthSheetOpen(false); setIsLoginOpen(true); }}
+              onSignupClick={() => { setIsAuthSheetOpen(false); setIsSignupOpen(true); }}
+            />
+          )}
           <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+          <SignupModal isOpen={isSignupOpen} onClose={() => setIsSignupOpen(false)} />
         </div>
       ) : rooms.length === 0 ? (
         <div className="text-center py-16">

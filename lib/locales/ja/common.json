@@ -130,6 +130,11 @@
     "noTrendingPosts": "現在人気投稿はありません。",
     "viewAll": "もっと見る →",
     "banners": {
+      "banner1": {
+        "title": "❗️ 30秒でアプリのように使う ❗️",
+        "desc": "より速く、より便利に",
+        "cta": "→ 今すぐ設定 →"
+      },
       "policy": {
         "title": "外国人支援政策",
         "desc": "2026年新政策・支援情報"
@@ -178,7 +183,6 @@
     "resetPasswordTitle": "パスワードリセット",
     "chooseLanguage": "言語を選択",
     "chooseLanguageDesc": "お好みの言語を選択してください",
-    "chooseLanguageHint": "コンテンツの翻訳と設定に使用する言語を選択してください。",
     "confirmSelection": "選択を確定",
     "languageUpdated": "言語が更新されました！",
     "saving": "保存中...",
@@ -647,5 +651,16 @@
       "expired": "集合時間が過ぎたため、このチャットは終了しました。",
       "expiresAt": "{{time}}まで開いている一時チャットです"
     }
+  },
+  "onboarding": {
+    "setNickname": "ニックネームを決めてください",
+    "checkDuplicate": "重複確認",
+    "checking": "確認中...",
+    "nicknameAvailable": "使用可能なニックネームです。",
+    "nicknameUnavailable": "使用できないニックネームです。",
+    "checkError": "確認中にエラーが発生しました。",
+    "saving": "保存中...",
+    "start": "始める",
+    "saveFailed": "保存に失敗しました。もう一度お試しください。"
   }
 }
