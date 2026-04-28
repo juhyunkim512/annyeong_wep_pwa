@@ -16,10 +16,11 @@ export function useI18nLang() {
   const changeLang = useCallback(
     async (lang: string) => {
       const code = lang as AppLang;
-      // 즉시 UI 업데이트 (await 없이 반환)
+      // 즉시 UI 업데이트
       await i18n.changeLanguage(code);
+      localStorage.setItem('app-lang', code);
 
-      // DB 저장은 백그라운드에서 비동기 처리 (UI 블로킹 없음)
+      // DB 저장은 백그라운드에서 비동기 처리
       supabase.auth.getSession().then(({ data: sessionData }) => {
         if (sessionData.session) {
           supabase

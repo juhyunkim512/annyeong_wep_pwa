@@ -9,6 +9,8 @@ import AuthSelectSheet from '@/components/common/AuthSelectSheet';
 import Link from 'next/link';
 import AvatarImage from '@/components/common/AvatarImage';
 import { useTranslation } from 'react-i18next';
+import i18n, { normalizeDbLang } from '@/lib/i18n';
+import { LANG_STORAGE_KEY } from '@/components/common/I18nProvider';
 
 interface ProfileData {
   nickname: string;
@@ -69,7 +71,14 @@ export default function MyPagePage() {
         if (cancelled) return;
         if (result && 'data' in result) {
           if (result.error) console.error('[MyPage] profile fetch error:', result.error);
-          setProfile(result.data ?? null);
+          const profileData = result.data ?? null;
+          setProfile(profileData);
+          // 프로필 로드 후 언어 반영 및 localStorage 저장
+          if (profileData?.uselanguage) {
+            const lang = normalizeDbLang(profileData.uselanguage);
+            localStorage.setItem(LANG_STORAGE_KEY, lang);
+            if (i18n.language !== lang) i18n.changeLanguage(lang);
+          }
         }
       } catch (err) {
         if (!cancelled) console.error('[MyPage] init exception:', err);
