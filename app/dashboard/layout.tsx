@@ -92,6 +92,25 @@ export default function DashboardLayout({
       disabled: isChatRoom,
     })
 
+  // ── OAuth SFSafariViewController 복귀 감지 ──────────────
+  // iOS에서 카카오/구글 OAuth는 SFSafariViewController(별도 컨텍스트)에서 처리됨.
+  // "완료" 버튼으로 돌아오면 onAuthStateChange가 발화하지 않으므로,
+  // visibilitychange로 세션을 체크해 새 세션이 생겼으면 reload로 동기화.
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState !== 'visible') return
+      if (isLoggedIn !== false) return // null(로딩 중) 또는 이미 로그인 상태면 스킵
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          window.location.reload()
+        }
+      } catch {}
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [isLoggedIn])
+
   // ── Total unread badge ──────────────────────────────────
   const [totalUnread, setTotalUnread] = useState(0)
 

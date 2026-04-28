@@ -70,10 +70,58 @@ export default function HomePage() {
   const [gatherItems, setGatherItems] = useState<GatherSummary[]>([])
   const [gatherLoading, setGatherLoading] = useState(true)
 
+  // auth 상태를 state로 저장 — fetchData 안에서 getSession() 절대 호출 금지
+  // Supabase 내부 mutex: 쿼리 실행 중 getSession() 재호출 시 데드락 발생
+  const [authReady, setAuthReady] = useState(false)
+  const [cachedSession, setCachedSession] = useState<{ userId: string; accessToken: string; userLang: string } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // onAuthStateChange 콜백을 async로 만들지 않는다:
+      // Supabase 내부 _emitInitialSession이 auth lock을 잡은 채 콜백을 호출하는데,
+      // 콜백 안에서 supabase 쿼리를 await하면 getSession()이 같은 lock 재획득 시도 → 데드락.
+      // profile 쿼리는 콜백이 반환된 후(lock 해제 후) detached promise로 실행한다.
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        if (session?.user) {
+          const userId = session.user.id
+          const accessToken = session.access_token
+          supabase
+            .from('profile')
+            .select('uselanguage')
+            .eq('id', userId)
+            .maybeSingle()
+            .then(({ data: profile }) => {
+              if (cancelled) return
+              setCachedSession({
+                userId,
+                accessToken,
+                userLang: normalizeLang(profile?.uselanguage),
+              })
+              setAuthReady(true)
+            })
+            .catch(() => {
+              if (cancelled) return
+              setCachedSession({ userId, accessToken, userLang: 'ko' })
+              setAuthReady(true)
+            })
+        } else {
+          setCachedSession(null)
+          setAuthReady(true)
+        }
+      }
+    })
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
+  }, [])
+
   // request id ref: 최신 요청만 상태 반영
   const reqRef = useRef(0)
 
   useEffect(() => {
+    if (!authReady) return
     const reqId = ++reqRef.current
     const controller = new AbortController()
     const fetchData = async () => {
@@ -138,15 +186,8 @@ export default function HomePage() {
         // ── 번역: 트렌딩 포스트 제목 번역 ──
         void (async () => {
           try {
-            const { data: { session } } = await supabase.auth.getSession()
-            if (!session || reqRef.current !== reqId) return
-            const { data: userProfile } = await supabase
-              .from('profile')
-              .select('uselanguage')
-              .eq('id', session.user.id)
-              .maybeSingle()
-            const userLang = normalizeLang(userProfile?.uselanguage)
-            const accessToken = session.access_token
+            if (!cachedSession || reqRef.current !== reqId) return
+            const { userLang, accessToken } = cachedSession
             const toTranslate = normalizedTrending.filter((p) => normalizeLang(p.language) !== userLang)
             if (toTranslate.length > 0) {
               const batchItems = toTranslate.map((p) => ({
@@ -186,7 +227,7 @@ export default function HomePage() {
     }
     fetchData()
     return () => controller.abort()
-  }, [])
+  }, [authReady])
 
   const banner1 = { image: '/banner1.png', isGuide: false, href: 'https://cod-clay-40439412.figma.site/', communityLink: false }
 
