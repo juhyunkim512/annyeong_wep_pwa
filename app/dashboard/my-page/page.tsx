@@ -72,18 +72,29 @@ export default function MyPagePage() {
       }
     };
 
-    // getSession() 대신 onAuthStateChange(INITIAL_SESSION) 사용:
-    // getSession()은 토큰 만료 시 내부적으로 리프레시 HTTP 요청을 날리는데
-    // 이 요청이 행(hang)하면 Promise가 영원히 pending → 무한 로딩 발생.
-    // INITIAL_SESSION 이벤트는 네트워크 없이 즉시 발화하므로 안전.
+    let loaded = false;
+    const tryLoad = (session: Parameters<typeof loadProfile>[0]) => {
+      if (loaded || cancelled) return;
+      loaded = true;
+      loadProfile(session);
+    };
+
+    // INITIAL_SESSION: 캐시된 세션으로 즉시 발화 (정상 케이스)
+    // SIGNED_IN: Web Locks 데드락으로 INITIAL_SESSION이 지연될 때 fallback
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'INITIAL_SESSION') {
-        loadProfile(session);
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        tryLoad(session);
       }
     });
 
+    // 두 이벤트 모두 발화하지 않는 완전 데드락 상황 안전망
+    const safetyTimer = setTimeout(() => {
+      if (!loaded && !cancelled) setLoading(false);
+    }, 5000);
+
     return () => {
       cancelled = true;
+      clearTimeout(safetyTimer);
       subscription.unsubscribe();
     };
   }, []);
