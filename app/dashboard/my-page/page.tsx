@@ -57,14 +57,20 @@ export default function MyPagePage() {
       console.log('[my-page] session exists: true, user id:', session.user.id);
       setIsLoggedIn(true);
       try {
-        const { data: profileData, error } = await supabase
-          .from('profile')
-          .select('nickname, flag, uselanguage, image_url')
-          .eq('id', session.user.id)
-          .maybeSingle();
+        // Promise.race로 타임아웃 추가: Web Locks 데드락으로 쿼리가 hang될 경우 5초 후 포기
+        const result = await Promise.race([
+          supabase
+            .from('profile')
+            .select('nickname, flag, uselanguage, image_url')
+            .eq('id', session.user.id)
+            .maybeSingle(),
+          new Promise<null>(resolve => setTimeout(() => resolve(null), 5000)),
+        ]);
         if (cancelled) return;
-        if (error) console.error('[MyPage] profile fetch error:', error);
-        setProfile(profileData ?? null);
+        if (result && 'data' in result) {
+          if (result.error) console.error('[MyPage] profile fetch error:', result.error);
+          setProfile(result.data ?? null);
+        }
       } catch (err) {
         if (!cancelled) console.error('[MyPage] init exception:', err);
       } finally {
