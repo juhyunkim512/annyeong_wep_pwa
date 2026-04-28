@@ -91,20 +91,22 @@ export default function HomePage() {
             .select('uselanguage')
             .eq('id', userId)
             .maybeSingle()
-            .then(({ data: profile }) => {
-              if (cancelled) return
-              setCachedSession({
-                userId,
-                accessToken,
-                userLang: normalizeLang(profile?.uselanguage),
-              })
-              setAuthReady(true)
-            })
-            .catch(() => {
-              if (cancelled) return
-              setCachedSession({ userId, accessToken, userLang: 'ko' })
-              setAuthReady(true)
-            })
+            .then(
+              ({ data: profile }) => {
+                if (cancelled) return
+                setCachedSession({
+                  userId,
+                  accessToken,
+                  userLang: normalizeLang(profile?.uselanguage),
+                })
+                setAuthReady(true)
+              },
+              () => {
+                if (cancelled) return
+                setCachedSession({ userId, accessToken, userLang: 'ko' })
+                setAuthReady(true)
+              }
+            )
         } else {
           setCachedSession(null)
           setAuthReady(true)
