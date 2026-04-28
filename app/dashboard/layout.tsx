@@ -198,7 +198,7 @@ export default function DashboardLayout({
       window.removeEventListener('focus', handler)
       window.removeEventListener('unreadUpdate', handler)
     }
-  }, [pathname, currentUserId])
+  }, [currentUserId])
 
   // isChatRoom은 위에서 이미 선언됨
 

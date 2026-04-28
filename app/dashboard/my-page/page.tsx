@@ -173,7 +173,7 @@ export default function MyPagePage() {
       {isLoggedIn && (
         <div className="space-y-3">
           {MENU_ITEMS.map((item) => (
-            <Link key={item.href} href={item.href}>
+            <Link key={item.href} href={item.href} prefetch={false}>
               <div className="bg-white rounded-xl border border-gray-200 flex items-center justify-between px-5 py-4 hover:bg-gray-50 active:bg-gray-100 transition cursor-pointer">
                 <div className="flex items-center gap-4">
                   <img src={item.icon} alt={item.label} className="w-7 h-7 object-contain" />
