@@ -80,7 +80,6 @@ export default function ChatRoomPage() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const translatingRef = useRef(false);
   const readDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestSeenAtRef = useRef<string | null>(null);
   const myIdRef = useRef<string | null>(null);
@@ -95,9 +94,6 @@ export default function ChatRoomPage() {
     userLang: string,
     token: string,
   ) => {
-    if (translatingRef.current) return;
-    translatingRef.current = true;
-
     const toTranslate = msgs
       .filter((m) => !m.pending && !m.is_deleted)
       .slice(-20)
@@ -106,7 +102,7 @@ export default function ChatRoomPage() {
         return msgLang !== userLang && !_translationCache.has(`${m.id}:${userLang}`);
       });
 
-    if (toTranslate.length === 0) { translatingRef.current = false; return; }
+    if (toTranslate.length === 0) return;
 
     try {
       const items = toTranslate.map((m) => ({
@@ -132,7 +128,6 @@ export default function ChatRoomPage() {
     } catch (err) {
       console.error('[Chat] batch translate error:', err);
     }
-    translatingRef.current = false;
   }, []);
 
   // ─── 초기 데이터 로드 ─────────────────────

@@ -225,17 +225,36 @@ export default function UserProfileModal({
   const handleFollow = async () => {
     if (!currentUserId) { onLoginRequired(); return; }
     setFollowLoading(true);
+
+    // Optimistic update: 즉시 UI 반영
+    const wasFollowing = isFollowing;
+    setIsFollowing(!wasFollowing);
+    setFollowerCount((c) => c + (wasFollowing ? -1 : 1));
+
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { setFollowLoading(false); onLoginRequired(); return; }
-    const method = isFollowing ? 'DELETE' : 'POST';
+    if (!session) {
+      setIsFollowing(wasFollowing);
+      setFollowerCount((c) => c + (wasFollowing ? 1 : -1));
+      setFollowLoading(false);
+      onLoginRequired();
+      return;
+    }
+    const method = wasFollowing ? 'DELETE' : 'POST';
     try {
       const res = await fetch('/api/follow', {
         method,
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
         body: JSON.stringify({ targetUserId: userId }),
       });
-      if (res.ok) setIsFollowing(!isFollowing);
-    } catch { /* ignore */ }
+      if (!res.ok) {
+        // 실패 시 롤백
+        setIsFollowing(wasFollowing);
+        setFollowerCount((c) => c + (wasFollowing ? 1 : -1));
+      }
+    } catch {
+      setIsFollowing(wasFollowing);
+      setFollowerCount((c) => c + (wasFollowing ? 1 : -1));
+    }
     setFollowLoading(false);
   };
 
