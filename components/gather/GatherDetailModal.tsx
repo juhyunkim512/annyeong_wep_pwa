@@ -80,13 +80,21 @@ export default function GatherDetailModal({
     const { data: { session } } = await supabase.auth.getSession();
     setCurrentUserId(session?.user?.id || null);
 
-    // 글 정보 가져오기
-    const { data: postData } = await supabase
-      .from('gather_post')
-      .select('*, public_profile(nickname, image_url, flag)')
-      .eq('id', postId)
-      .maybeSingle();
+    // 글 정보 + 참석자 병렬 조회
+    const [postResult, partResult] = await Promise.all([
+      supabase
+        .from('gather_post')
+        .select('*, public_profile(nickname, image_url, flag)')
+        .eq('id', postId)
+        .maybeSingle(),
+      supabase
+        .from('gather_participant')
+        .select('user_id, public_profile(nickname, image_url, flag)')
+        .eq('gather_post_id', postId)
+        .order('created_at', { ascending: true }),
+    ]);
 
+    const postData = postResult.data;
     if (postData) {
       const normalizedPost = {
         ...postData,
@@ -96,47 +104,42 @@ export default function GatherDetailModal({
       };
       setPost(normalizedPost);
 
-      // ── 번역 (community/[id] 패턴) ──
+      // ── 번역: 백그라운드로 실행 (로딩 UI에 영향 없음) ──
       if (session) {
-        try {
-          const { data: userProfile } = await supabase
-            .from('profile')
-            .select('uselanguage')
-            .eq('id', session.user.id)
-            .maybeSingle();
-          const userLang = normalizeLang(userProfile?.uselanguage);
-          const postLang = normalizeLang(postData.language);
+        void (async () => {
+          try {
+            const { data: userProfile } = await supabase
+              .from('profile')
+              .select('uselanguage')
+              .eq('id', session.user.id)
+              .maybeSingle();
+            const userLang = normalizeLang(userProfile?.uselanguage);
+            const postLang = normalizeLang(postData.language);
 
-          if (userLang !== postLang) {
-            const items: import('@/lib/utils/batchTranslate').BatchTranslateItem[] = [
-              { key: 'title', contentType: 'post', contentId: postData.id, fieldName: 'title', sourceText: postData.title, sourceLanguage: postData.language },
-            ];
-            if (postData.content) {
-              items.push({ key: 'content', contentType: 'post', contentId: postData.id, fieldName: 'content', sourceText: postData.content, sourceLanguage: postData.language });
+            if (userLang !== postLang) {
+              const items: import('@/lib/utils/batchTranslate').BatchTranslateItem[] = [
+                { key: 'title', contentType: 'post', contentId: postData.id, fieldName: 'title', sourceText: postData.title, sourceLanguage: postData.language },
+              ];
+              if (postData.content) {
+                items.push({ key: 'content', contentType: 'post', contentId: postData.id, fieldName: 'content', sourceText: postData.content, sourceLanguage: postData.language });
+              }
+              if (postData.location_label) {
+                items.push({ key: 'loc', contentType: 'post', contentId: `${postData.id}-loc`, fieldName: 'content', sourceText: postData.location_label, sourceLanguage: postData.language });
+              }
+              const results = await batchTranslate(items, userLang, session.access_token);
+              setTranslatedPost({
+                title: results['title']?.isTranslated ? results['title'].text : postData.title,
+                content: results['content']?.isTranslated ? results['content'].text : postData.content,
+                locationLabel: results['loc']?.isTranslated ? results['loc'].text : postData.location_label,
+              });
             }
-            if (postData.location_label) {
-              items.push({ key: 'loc', contentType: 'post', contentId: `${postData.id}-loc`, fieldName: 'content', sourceText: postData.location_label, sourceLanguage: postData.language });
-            }
-            const results = await batchTranslate(items, userLang, session.access_token);
-            setTranslatedPost({
-              title: results['title']?.isTranslated ? results['title'].text : postData.title,
-              content: results['content']?.isTranslated ? results['content'].text : postData.content,
-              locationLabel: results['loc']?.isTranslated ? results['loc'].text : postData.location_label,
-            });
-          }
-        } catch { /* 번역 실패 시 원문 표시 */ }
+          } catch { /* 번역 실패 시 원문 표시 */ }
+        })();
       }
     }
 
-    // 참석자 목록
-    const { data: partData } = await supabase
-      .from('gather_participant')
-      .select('user_id, public_profile(nickname, image_url, flag)')
-      .eq('gather_post_id', postId)
-      .order('created_at', { ascending: true });
-
-    if (partData) {
-      setParticipants(partData.map((p: any) => ({
+    if (partResult.data) {
+      setParticipants(partResult.data.map((p: any) => ({
         user_id: p.user_id,
         nickname: Array.isArray(p.public_profile) ? p.public_profile[0]?.nickname : p.public_profile?.nickname ?? null,
         image_url: Array.isArray(p.public_profile) ? p.public_profile[0]?.image_url : p.public_profile?.image_url ?? null,

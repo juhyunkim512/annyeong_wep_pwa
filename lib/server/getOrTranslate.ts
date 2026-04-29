@@ -139,7 +139,10 @@ export async function getOrTranslateContent(
     usedProvider = 'google';
     try {
       const client = getTranslateClient();
-      const [result] = await client.translate(sourceText, tgtLang);
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Google Translate timeout')), 6000)
+      );
+      const [result] = await Promise.race([client.translate(sourceText, tgtLang), timeout]) as [string | string[], unknown];
       translatedText = Array.isArray(result) ? result[0] : result;
     } catch (err) {
       console.error('[getOrTranslateContent] Google Translation error:', err);

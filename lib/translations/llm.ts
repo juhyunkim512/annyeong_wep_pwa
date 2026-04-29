@@ -19,6 +19,8 @@ function getOpenAIClient(): OpenAI {
   if (!_openaiClient) {
     _openaiClient = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
+      timeout: 8000,
+      maxRetries: 0,
     });
   }
   return _openaiClient;
