@@ -69,6 +69,7 @@ export default function HomePage() {
 
   const [gatherItems, setGatherItems] = useState<GatherSummary[]>([])
   const [gatherLoading, setGatherLoading] = useState(true)
+  const [translatedGatherTitles, setTranslatedGatherTitles] = useState<Record<string, string>>({})
 
   // auth 상태를 state로 저장 — fetchData 안에서 getSession() 절대 호출 금지
   // Supabase 내부 mutex: 쿼리 실행 중 getSession() 재호출 시 데드락 발생
@@ -182,6 +183,38 @@ export default function HomePage() {
           if (reqRef.current === reqId) {
             setGatherItems(items)
           }
+
+          // ── 번역: 모여라 제목 번역 ──
+          void (async () => {
+            try {
+              if (!cachedSession || reqRef.current !== reqId) return
+              const { userLang, accessToken } = cachedSession
+              const toTranslate = items.filter((p) => normalizeLang(p.language) !== userLang)
+              if (toTranslate.length > 0) {
+                const batchItems = toTranslate.map((p) => ({
+                  key: p.id,
+                  contentType: 'post' as const,
+                  contentId: p.id,
+                  fieldName: 'title' as const,
+                  sourceText: p.title,
+                  sourceLanguage: p.language,
+                }))
+                const batchResults = await batchTranslate(batchItems, userLang, accessToken, controller.signal)
+                if (reqRef.current === reqId) {
+                  const map: Record<string, string> = {}
+                  for (const p of toTranslate) {
+                    const res = batchResults[p.id]
+                    if (res?.isTranslated) map[p.id] = res.text
+                  }
+                  setTranslatedGatherTitles(map)
+                }
+              }
+            } catch (err) {
+              if ((err as Error)?.name !== 'AbortError') {
+                console.warn('[Home] gather translation failed:', err)
+              }
+            }
+          })()
         }
         setGatherLoading(false)
 
@@ -335,10 +368,10 @@ export default function HomePage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 truncate">
-                          {CATEGORY_EMOJI[item.category] ?? '📌'} {item.title}
+                          {CATEGORY_EMOJI[item.category] ?? '📌'} {translatedGatherTitles[item.id] ?? item.title}
                         </p>
                         <p className="text-sm text-gray-500 mt-1">
-                          📍 {item.location_label} • {t('gather.participants', { current: item.participant_count, max: item.max_participants })}
+                          📍 {/^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(item.location_label?.trim() ?? '') ? t('gather.locationNearby') : item.location_label} • {t('gather.participants', { current: item.participant_count, max: item.max_participants })}
                         </p>
                       </div>
                       <span className="text-xs text-[#9DB8A0] font-medium whitespace-nowrap shrink-0">{timeLeft}</span>

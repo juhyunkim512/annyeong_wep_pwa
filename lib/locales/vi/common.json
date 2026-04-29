@@ -566,6 +566,7 @@
     "timeLeftHour": "Còn {{hours}} giờ {{minutes}} phút",
     "expired": "Đã hết hạn",
     "participants": "{{current}}/{{max}} người",
+    "locationNearby": "Gần đây",
     "detail": {
       "title": "Chi tiết buổi gặp",
       "location": "Địa điểm",

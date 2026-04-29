@@ -289,7 +289,7 @@ export default function GatherPage() {
                   {/* 하단 정보 */}
                   <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
                     <span className="flex items-center gap-1">
-                      📍 {translatedLocations[post.id] ?? post.location_label}
+                      📍 {/^-?\d+\.\d+,\s*-?\d+\.\d+$/.test((translatedLocations[post.id] ?? post.location_label)?.trim() ?? '') ? t('gather.locationNearby') : (translatedLocations[post.id] ?? post.location_label)}
                     </span>
                     <span className="flex items-center gap-1">
                       👥 {t('gather.participants', { current: post.participant_count, max: post.max_participants })}

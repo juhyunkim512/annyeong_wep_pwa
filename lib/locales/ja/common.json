@@ -566,6 +566,7 @@
     "timeLeftHour": "{{hours}}時間{{minutes}}分残り",
     "expired": "終了",
     "participants": "{{current}}/{{max}}人",
+    "locationNearby": "近く",
     "detail": {
       "title": "集まり詳細",
       "location": "場所",

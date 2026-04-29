@@ -566,6 +566,7 @@
     "timeLeftHour": "{{hours}}시간 {{minutes}}분 남음",
     "expired": "마감됨",
     "participants": "{{current}}/{{max}}명",
+    "locationNearby": "근처",
     "detail": {
       "title": "모임 상세",
       "location": "위치",

@@ -566,6 +566,7 @@
     "timeLeftHour": "剩余{{hours}}小时{{minutes}}分钟",
     "expired": "已结束",
     "participants": "{{current}}/{{max}}人",
+    "locationNearby": "附近",
     "detail": {
       "title": "聚会详情",
       "location": "地点",

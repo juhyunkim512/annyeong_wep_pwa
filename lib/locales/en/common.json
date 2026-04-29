@@ -567,6 +567,7 @@
     "timeLeftHour": "{{hours}}h {{minutes}}m left",
     "expired": "Expired",
     "participants": "{{current}}/{{max}}",
+    "locationNearby": "Nearby",
     "detail": {
       "title": "Gathering Detail",
       "location": "Location",

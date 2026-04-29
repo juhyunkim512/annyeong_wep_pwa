@@ -566,6 +566,7 @@
     "timeLeftHour": "{{hours}}h {{minutes}}min restantes",
     "expired": "Expirado",
     "participants": "{{current}}/{{max}}",
+    "locationNearby": "Cerca",
     "detail": {
       "title": "Detalle de reunión",
       "location": "Ubicación",
