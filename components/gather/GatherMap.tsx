@@ -109,7 +109,7 @@ export function GatherMapPicker({ onSelect, hint, fullscreen }: GatherMapPickerP
     });
     mapInstance.current = map;
 
-    // 지도 이동이 멈추면 중심 좌표의 주소 역지오코딩
+    // 지도 이동이 멈추면 중심 좌표의 동 이름 역지오코딩
     map.addListener('idle', () => {
       const c = map.getCenter();
       if (!c) return;
@@ -118,7 +118,14 @@ export function GatherMapPicker({ onSelect, hint, fullscreen }: GatherMapPickerP
       const geocoder = new (window as any).google.maps.Geocoder();
       geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
         if (status === 'OK' && results && results[0]) {
-          setCurrentAddress(results[0].formatted_address);
+          const comps = results[0].address_components as { long_name: string; types: string[] }[];
+          // 동(sublocality_level_2/3) → 구(sublocality_level_1) → 시(locality) 순서로 fallback
+          const dong = comps.find((c) =>
+            c.types.includes('sublocality_level_2') || c.types.includes('sublocality_level_3')
+          )?.long_name;
+          const gu = comps.find((c) => c.types.includes('sublocality_level_1'))?.long_name;
+          const city = comps.find((c) => c.types.includes('locality'))?.long_name;
+          setCurrentAddress(dong || gu || city || results[0].formatted_address);
         } else {
           setCurrentAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
         }
@@ -266,19 +273,31 @@ export function GatherMapView({ pins, onPinClick }: GatherMapViewProps) {
     markersRef.current = [];
 
     const CATEGORY_EMOJI: Record<string, string> = {
-      drink: '🍺', smoke: '🚬', cafe: '☕', food: '🍚', walk: '🚶', etc: '💬',
+      language: '🗣️', drink: '🍺', sports: '💪', food: '☕',
+      talk: '💬', game: '🎮', pet: '🐾', travel: '✈️',
+      sing: '🎤', movie: '🎬', etc: '📌',
+    };
+
+    const makeIcon = (emoji: string) => {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="52" viewBox="0 0 40 52">
+        <path d="M20 0C8.954 0 0 8.954 0 20c0 15 20 32 20 32S40 35 40 20C40 8.954 31.046 0 20 0z" fill="#9DB8A0" stroke="white" stroke-width="2"/>
+        <text x="20" y="24" text-anchor="middle" dominant-baseline="middle" font-size="17" font-family="Apple Color Emoji,Segoe UI Emoji,sans-serif">${emoji}</text>
+      </svg>`;
+      return {
+        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+        scaledSize: new (window as any).google.maps.Size(40, 52),
+        anchor: new (window as any).google.maps.Point(20, 52),
+      };
     };
 
     pins.forEach((pin) => {
       if (!pin.lat || !pin.lng) return;
+      const emoji = CATEGORY_EMOJI[pin.category] || '📌';
       const marker = new (window as any).google.maps.Marker({
         position: { lat: pin.lat, lng: pin.lng },
         map: mapInstance.current!,
         title: pin.title,
-        label: {
-          text: CATEGORY_EMOJI[pin.category] || '📍',
-          fontSize: '18px',
-        },
+        icon: makeIcon(emoji),
       });
 
       const infoWindow = new (window as any).google.maps.InfoWindow({
