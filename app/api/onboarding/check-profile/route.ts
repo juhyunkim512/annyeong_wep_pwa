@@ -11,9 +11,9 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from('profile')
-    .select('id')
+    .select('id, uselanguage')
     .eq('id', user.id)
     .maybeSingle()
 
-  return NextResponse.json({ hasProfile: !!profile, authenticated: true, userId: user.id })
+  return NextResponse.json({ hasProfile: !!profile, authenticated: true, userId: user.id, uselanguage: profile?.uselanguage ?? null })
 }

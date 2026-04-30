@@ -5,7 +5,8 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import '@/lib/i18n'
+import i18n, { normalizeDbLang } from '@/lib/i18n'
+import { LANG_STORAGE_KEY } from '@/components/common/I18nProvider'
 import { usePushNotification } from '@/lib/hooks/usePushNotification'
 import { usePullToRefresh } from '@/lib/hooks/usePullToRefresh'
 import RefreshIndicator from '@/components/common/RefreshIndicator'
@@ -52,8 +53,12 @@ export default function DashboardLayout({
       const res = await fetch('/api/onboarding/check-profile')
       const data = await res.json()
       console.log('[auth-sync] profile exists:', data.hasProfile)
-      // session이 있는 상태에서 profile이 없으면 onboarding으로 강제 이동
-      // authenticated 조건 제거 - session 존재 자체가 인증 확인
+      // 로그인 즉시 언어 적용 (localStorage 캐시 없을 때만 fetch 결과 사용)
+      if (data.uselanguage) {
+        const lang = normalizeDbLang(data.uselanguage)
+        localStorage.setItem(LANG_STORAGE_KEY, lang)
+        if (i18n.language !== lang) i18n.changeLanguage(lang)
+      }
       if (!data.hasProfile) {
         router.replace('/onboarding/country')
       }
