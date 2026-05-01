@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { supabase } from '@/lib/supabase/client'
 import Image from 'next/image'
+import '@/lib/i18n'
 
 async function signInWithOAuthProvider(provider: 'google' | 'kakao') {
   console.log(`[${provider}-login] click`)
@@ -29,6 +31,8 @@ interface AuthSelectSheetProps {
 }
 
 export default function AuthSelectSheet({ onClose, onLoginClick, onSignupClick }: AuthSelectSheetProps) {
+  const { t } = useTranslation('common')
+
   // 배경 스크롤 잠금
   useEffect(() => {
     const prev = document.body.style.overflow
@@ -94,14 +98,14 @@ export default function AuthSelectSheet({ onClose, onLoginClick, onSignupClick }
             onClick={onLoginClick}
             className="text-sm text-gray-500 hover:text-gray-800 transition"
           >
-            이메일로 로그인
+            {t('auth.login')}
           </button>
           <span className="text-gray-300 text-xs">|</span>
           <button
             onClick={onSignupClick}
             className="text-sm text-gray-500 hover:text-gray-800 transition"
           >
-            이메일로 회원가입
+            {t('auth.signUp')}
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import WritePostModal from '@/components/common/WritePostModal';
 import LoginModal from '@/components/common/LoginModal';
+import SignupModal from '@/components/common/SignupModal';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
@@ -55,7 +56,8 @@ export default function CommunityPage() {
   const [activeCategory, setActiveCategory] = useState('');
   const [isWriteOpen, setIsWriteOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isSignupOpen, setIsSignupOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [refreshCount, setRefreshCount] = useState(0);
   const [translatedTitles, setTranslatedTitles] = useState<Record<string, string>>({});
   const [hasMore, setHasMore] = useState(true);
@@ -200,6 +202,22 @@ export default function CommunityPage() {
         <h1 className="text-2xl font-bold mt-4 text-gray-800">{t('community.title')}</h1>
       </div>
 
+      {/* 비회원 가입 유도 배너 */}
+      {isLoggedIn === false && (
+        <div className="flex items-center justify-between gap-4 bg-[#EEF5EF] border border-[#9DB8A0]/40 rounded-xl px-4 py-3.5">
+          <p className="text-sm text-gray-700 leading-snug">
+            {t('community.guestBannerTitle')}<br />
+            <span className="text-gray-500 text-xs">{t('community.guestBannerDesc')}</span>
+          </p>
+          <button
+            onClick={() => setIsSignupOpen(true)}
+            className="shrink-0 bg-[#9DB8A0] hover:bg-[#87a68a] text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors whitespace-nowrap"
+          >
+            {t('community.guestBannerCta')}
+          </button>
+        </div>
+      )}
+
       {/* Category Tabs */}
       <div className="flex flex-wrap gap-2">
         {CATEGORIES.map((cat) => (
@@ -278,6 +296,7 @@ export default function CommunityPage() {
         onRequireLogin={() => setIsLoginOpen(true)}
       />
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      <SignupModal isOpen={isSignupOpen} onClose={() => setIsSignupOpen(false)} />
     </div>
   );
 }

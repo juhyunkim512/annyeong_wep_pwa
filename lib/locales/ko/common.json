@@ -112,6 +112,9 @@
     "unblockSuccess": "차단이 해제되었습니다.",
     "searchNoResults": "검색 결과가 없습니다.",
     "searchPlaceholder": "게시글 검색...",
+    "guestBannerTitle": "가입하고 언어 장벽 없이 소통해 보세요!",
+    "guestBannerDesc": "커뮤니티의 모든 글을 내 언어로 편하게 읽을 수 있어요.",
+    "guestBannerCta": "10초 가입하기",
     "categories": {
       "all": "전체 게시글",
       "food": "음식",

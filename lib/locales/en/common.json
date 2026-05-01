@@ -112,6 +112,9 @@
     "unblockSuccess": "User has been unblocked.",
     "searchNoResults": "No posts found for your search.",
     "searchPlaceholder": "Search posts...",
+    "guestBannerTitle": "Break language barriers and connect!",
+    "guestBannerDesc": "Read every community post in your own language.",
+    "guestBannerCta": "Join in 10 sec",
     "categories": {
       "all": "All Posts",
       "food": "Food",

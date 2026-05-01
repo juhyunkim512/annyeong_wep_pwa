@@ -112,6 +112,9 @@
     "unblockSuccess": "Desbloqueado con éxito.",
     "searchNoResults": "No se encontraron publicaciones.",
     "searchPlaceholder": "Buscar publicaciones...",
+    "guestBannerTitle": "¡Únete y comunícate sin barreras idiomáticas!",
+    "guestBannerDesc": "Lee todas las publicaciones en tu propio idioma.",
+    "guestBannerCta": "Regístrate en 10 seg",
     "categories": {
       "all": "Todas las publicaciones",
       "food": "Comida",

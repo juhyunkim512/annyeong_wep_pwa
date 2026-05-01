@@ -112,6 +112,9 @@
     "unblockSuccess": "已取消屏蔽。",
     "searchNoResults": "未找到相关帖子。",
     "searchPlaceholder": "搜索帖子...",
+    "guestBannerTitle": "打破语言障碍，畅快交流！",
+    "guestBannerDesc": "社区所有帖子均可用你的语言轻松阅读。",
+    "guestBannerCta": "10秒注册",
     "categories": {
       "all": "全部帖子",
       "food": "美食",

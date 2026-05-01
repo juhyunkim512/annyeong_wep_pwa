@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase/client'
 import AuthSelectSheet from '@/components/common/AuthSelectSheet'
 import LoginModal from '@/components/common/LoginModal'
 import SignupModal from '@/components/common/SignupModal'
+import LanguageSelector from '@/components/common/LanguageSelector'
 
 const PULL_THRESHOLD = 72 // px
 
@@ -248,6 +249,13 @@ export default function DashboardLayout({
           </Link>
         </div>
 
+        {/* Language selector (비로그인 전용) */}
+        {isLoggedIn === false && (
+          <div className="px-6 py-3">
+            <LanguageSelector />
+          </div>
+        )}
+
         {/* Menu */}
         <nav className="flex-1 p-6 space-y-2">
           {menuItems.map((item) => {
@@ -291,6 +299,7 @@ export default function DashboardLayout({
             />
             ANNYEONG
           </Link>
+          {isLoggedIn === false && <LanguageSelector />}
         </div>
       </div>
 

@@ -112,6 +112,9 @@
     "unblockSuccess": "ブロックを解除しました。",
     "searchNoResults": "投稿が見つかりませんでした。",
     "searchPlaceholder": "投稿を検索...",
+    "guestBannerTitle": "言語の壁を越えてつながろう！",
+    "guestBannerDesc": "コミュニティのすべての投稿を自分の言語で読めます。",
+    "guestBannerCta": "10秒で登録",
     "categories": {
       "all": "すべての投稿",
       "food": "食べ物",

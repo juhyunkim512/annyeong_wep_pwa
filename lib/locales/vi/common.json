@@ -112,6 +112,9 @@
     "unblockSuccess": "Đã bỏ chặn thành công.",
     "searchNoResults": "Không tìm thấy bài viết nào.",
     "searchPlaceholder": "Tìm kiếm bài viết...",
+    "guestBannerTitle": "Tham gia và giao tiếp không rào cản ngôn ngữ!",
+    "guestBannerDesc": "Đọc mọi bài viết cộng đồng bằng ngôn ngữ của bạn.",
+    "guestBannerCta": "Đăng ký 10 giây",
     "categories": {
       "all": "Tất cả bài viết",
       "food": "Ẩm thực",
