@@ -28,8 +28,28 @@ export async function POST(req: Request) {
 
     const admin = createAdminClient();
 
-    // 이미 인증 완료된(email_confirmed_at 있는) 유저만 중복으로 판단
-    const { data: listData } = await admin.auth.admin.listUsers();
+    // ── Rate limit: 60초에 1회 ──────────────────────────────
+    // expires_at = 발송 시각 + 5분이므로, 역산으로 발송 시각을 구함
+    const { data: existing } = await admin
+      .from('signup_email_verification')
+      .select('expires_at')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (existing?.expires_at) {
+      const sentAt = new Date(existing.expires_at).getTime() - 5 * 60 * 1000;
+      const secondsSinceSent = (Date.now() - sentAt) / 1000;
+      if (secondsSinceSent < 60) {
+        const waitSeconds = Math.ceil(60 - secondsSinceSent);
+        return NextResponse.json(
+          { success: false, message: `Please wait ${waitSeconds} seconds before requesting another code.` },
+          { status: 429 }
+        );
+      }
+    }
+
+    // ── 이미 인증 완료된 이메일 중복 체크 ──────────────────
+    const { data: listData } = await admin.auth.admin.listUsers({ perPage: 1000 });
     const alreadyRegistered = (listData?.users ?? []).some(
       (u) => u.email === email && !!u.email_confirmed_at
     );
@@ -40,12 +60,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // 6자리 인증코드 생성 및 hash
+    // ── 인증코드 생성 및 저장 ───────────────────────────────
     const code = String(randomInt(100000, 999999));
     const codeHash = hashCode(email, code);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-    // 기존 row 삭제 후 새 row 삽입 (email unique 제약 없음)
     await admin.from('signup_email_verification').delete().eq('email', email);
 
     const { error: insertError } = await admin
@@ -66,7 +85,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 이메일 발송 (서버 직접 발송 — Supabase OTP 아님)
     await sendEmail({
       to: email,
       subject: 'Your ANNYEONG verification code',

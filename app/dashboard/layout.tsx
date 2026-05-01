@@ -51,6 +51,7 @@ export default function DashboardLayout({
       if (!session) return
       console.log('[auth-sync] check-profile for user:', session.user.id)
       const res = await fetch('/api/onboarding/check-profile')
+      if (!res.ok) return // 인증 실패(401) 등 에러 시 무시
       const data = await res.json()
       console.log('[auth-sync] profile exists:', data.hasProfile)
       // 로그인 즉시 언어 적용 (localStorage 캐시 없을 때만 fetch 결과 사용)
@@ -226,7 +227,7 @@ export default function DashboardLayout({
 
 
   return (
-    <div className="min-h-screen bg-[#F7FAF8] flex">
+    <div className="h-screen bg-[#F7FAF8] flex overflow-hidden">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 bg-white border-r border-gray-200 flex-col">
         {/* Logo */}

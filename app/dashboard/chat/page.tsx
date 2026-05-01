@@ -23,6 +23,7 @@ interface ChatRoom {
   // common
   last_message: string | null;
   last_message_at: string | null;
+  created_at: string;
   unread_count: number;
 }
 
@@ -70,7 +71,7 @@ export default function ChatListPage() {
       // ── 1:1 채팅방 ──
       const { data: directData } = await supabase
         .from('chat_room')
-        .select('id, user_a, user_b, last_message, last_message_at, user_a_hidden, user_b_hidden, user_a_hidden_at, user_b_hidden_at')
+        .select('id, user_a, user_b, last_message, last_message_at, created_at, user_a_hidden, user_b_hidden, user_a_hidden_at, user_b_hidden_at')
         .or(`user_a.eq.${uid},user_b.eq.${uid}`)
         .order('last_message_at', { ascending: false, nullsFirst: false });
 
@@ -135,6 +136,7 @@ export default function ChatListPage() {
           other_image_url: p?.image_url ?? null,
           last_message: r.last_message,
           last_message_at: r.last_message_at,
+          created_at: r.created_at,
           unread_count: unreadCountMap[r.id] ?? 0,
         };
       });
@@ -152,7 +154,7 @@ export default function ChatListPage() {
       if (gatherRoomIds.length > 0) {
         const { data: gatherData } = await supabase
           .from('gather_chat_room')
-          .select('id, title, last_message, last_message_at')
+          .select('id, title, last_message, last_message_at, created_at')
           .in('id', gatherRoomIds);
 
         // gather unread 계산
@@ -186,13 +188,14 @@ export default function ChatListPage() {
           gather_title: r.title ?? t('gather.title'),
           last_message: r.last_message ?? null,
           last_message_at: r.last_message_at ?? null,
+          created_at: r.created_at,
           unread_count: gatherUnreadMap[r.id] ?? 0,
         }));
       }
 
       // ── 합치고 최신순 정렬 ──
       const all = [...directRooms, ...gatherRooms].sort((a, b) =>
-        (b.last_message_at ?? '').localeCompare(a.last_message_at ?? '')
+        (b.last_message_at ?? b.created_at ?? '').localeCompare(a.last_message_at ?? a.created_at ?? '')
       );
       setRooms(all);
       setLoading(false);
@@ -228,7 +231,7 @@ export default function ChatListPage() {
                   : r
               );
               return next.sort((a, b) =>
-                (b.last_message_at ?? '').localeCompare(a.last_message_at ?? '')
+                (b.last_message_at ?? b.created_at ?? '').localeCompare(a.last_message_at ?? a.created_at ?? '')
               );
             }
             // 방이 숨김 해제됨 (삭제 후 상대방 메시지 수신) → 목록에 다시 추가
@@ -250,10 +253,11 @@ export default function ChatListPage() {
                     other_image_url: profile?.image_url ?? null,
                     last_message: updated.last_message,
                     last_message_at: updated.last_message_at,
+                    created_at: updated.last_message_at ?? new Date().toISOString(),
                     unread_count: 1,
                   };
                   return [newRoom, ...currentRooms].sort((a, b) =>
-                    (b.last_message_at ?? '').localeCompare(a.last_message_at ?? '')
+                    (b.last_message_at ?? b.created_at ?? '').localeCompare(a.last_message_at ?? a.created_at ?? '')
                   );
                 });
               });
@@ -267,7 +271,7 @@ export default function ChatListPage() {
         async (payload) => {
           const newRoom = payload.new as {
             id: string; user_a: string; user_b: string;
-            last_message: string | null; last_message_at: string | null;
+            last_message: string | null; last_message_at: string | null; created_at: string;
           };
           if (newRoom.user_a !== myId && newRoom.user_b !== myId) return;
           const otherId = newRoom.user_a === myId ? newRoom.user_b : newRoom.user_a;
@@ -285,6 +289,7 @@ export default function ChatListPage() {
               other_image_url: profile?.image_url ?? null,
               last_message: newRoom.last_message,
               last_message_at: newRoom.last_message_at,
+              created_at: newRoom.created_at,
               unread_count: 0,
             };
             return [room, ...prev];
@@ -315,7 +320,7 @@ export default function ChatListPage() {
             // 내가 참가자인지만 확인하면 충분
             supabase
               .from('chat_room')
-              .select('id, user_a, user_b, last_message, last_message_at')
+              .select('id, user_a, user_b, last_message, last_message_at, created_at')
               .eq('id', msg.room_id)
               .maybeSingle()
               .then(({ data: room }) => {
@@ -340,10 +345,11 @@ export default function ChatListPage() {
                         other_image_url: profile?.image_url ?? null,
                         last_message: room.last_message ?? msg.content,
                         last_message_at: room.last_message_at ?? msg.created_at,
+                        created_at: room.created_at ?? msg.created_at,
                         unread_count: 1,
                       };
                       return [newRoom, ...currentRooms].sort((a, b) =>
-                        (b.last_message_at ?? '').localeCompare(a.last_message_at ?? '')
+                        (b.last_message_at ?? b.created_at ?? '').localeCompare(a.last_message_at ?? a.created_at ?? '')
                       );
                     });
                     window.dispatchEvent(new CustomEvent('unreadUpdate'));
@@ -365,7 +371,7 @@ export default function ChatListPage() {
             const next = prev.map((r) =>
               r.id === updated.id ? { ...r, last_message: updated.last_message, last_message_at: updated.last_message_at } : r
             );
-            return next.sort((a, b) => (b.last_message_at ?? '').localeCompare(a.last_message_at ?? ''));
+            return next.sort((a, b) => (b.last_message_at ?? b.created_at ?? '').localeCompare(a.last_message_at ?? a.created_at ?? ''));
           });
         }
       )
@@ -377,7 +383,7 @@ export default function ChatListPage() {
           if (updated.hidden !== false) return;
           const { data: gatherRoom } = await supabase
             .from('gather_chat_room')
-            .select('id, title, last_message, last_message_at')
+            .select('id, title, last_message, last_message_at, created_at')
             .eq('id', updated.room_id)
             .maybeSingle();
           if (!gatherRoom) return;
@@ -389,10 +395,11 @@ export default function ChatListPage() {
               gather_title: gatherRoom.title,
               last_message: gatherRoom.last_message,
               last_message_at: gatherRoom.last_message_at,
+              created_at: gatherRoom.created_at,
               unread_count: 1,
             };
             return [newRoom, ...prev].sort((a, b) =>
-              (b.last_message_at ?? '').localeCompare(a.last_message_at ?? '')
+              (b.last_message_at ?? b.created_at ?? '').localeCompare(a.last_message_at ?? a.created_at ?? '')
             );
           });
           window.dispatchEvent(new CustomEvent('unreadUpdate'));

@@ -29,9 +29,10 @@ export async function GET() {
     const admin = createAdminClient();
     const now = new Date().toISOString();
 
+    // gather_participant 수를 embedded count로 한 번에 조회 (N+1 → 쿼리 1개)
     const { data: posts, error } = await admin
       .from('gather_post')
-      .select('*, public_profile(nickname, image_url, flag)')
+      .select('*, public_profile(nickname, image_url, flag), gather_participant(count)')
       .gt('expires_at', now)
       .order('created_at', { ascending: false });
 
@@ -40,30 +41,15 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // 각 글의 참석자 수 조회
-    const postIds = (posts || []).map((p: any) => p.id);
-    let participantCounts: Record<string, number> = {};
-
-    if (postIds.length > 0) {
-      const { data: participants } = await admin
-        .from('gather_participant')
-        .select('gather_post_id')
-        .in('gather_post_id', postIds);
-
-      if (participants) {
-        for (const p of participants) {
-          participantCounts[p.gather_post_id] = (participantCounts[p.gather_post_id] || 0) + 1;
-        }
-      }
-    }
-
     const result = (posts || []).map((p: any) => ({
       ...p,
       nickname: Array.isArray(p.public_profile) ? p.public_profile[0]?.nickname : p.public_profile?.nickname ?? null,
       author_image_url: Array.isArray(p.public_profile) ? p.public_profile[0]?.image_url : p.public_profile?.image_url ?? null,
       author_flag: Array.isArray(p.public_profile) ? p.public_profile[0]?.flag : p.public_profile?.flag ?? null,
-      participant_count: participantCounts[p.id] || 0,
+      // gather_participant(count) 응답: [{ count: N }] 형태
+      participant_count: Array.isArray(p.gather_participant) ? (p.gather_participant[0]?.count ?? 0) : 0,
       public_profile: undefined,
+      gather_participant: undefined,
     }));
 
     return NextResponse.json({ posts: result });

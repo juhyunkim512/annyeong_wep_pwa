@@ -7,6 +7,30 @@ const nextConfig: NextConfig = {
     root: path.resolve(__dirname),
   },
   reactStrictMode: false,
+  images: {
+    remotePatterns: [
+      // Supabase Storage
+      {
+        protocol: 'https',
+        hostname: 'kquhemtuhprdrijxwzfp.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+      // Google OAuth 프로필 이미지
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      // Kakao OAuth 프로필 이미지
+      {
+        protocol: 'http',
+        hostname: 'k.kakaocdn.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'k.kakaocdn.net',
+      },
+    ],
+  },
 };
 
 export default withPWA({

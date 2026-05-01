@@ -15,13 +15,13 @@ function extractToken(req: NextRequest): string | null {
 export async function GET(req: NextRequest) {
   try {
     const token = extractToken(req);
-    if (!token) return NextResponse.json({ rooms: [] });
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const admin = createAdminClient();
 
     // 유저 확인
     const { data: { user }, error: userError } = await admin.auth.getUser(token);
-    if (userError || !user) return NextResponse.json({ rooms: [] });
+    if (userError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     // 1단계: 내가 속한 room_id 목록
     const { data: memberRows } = await admin

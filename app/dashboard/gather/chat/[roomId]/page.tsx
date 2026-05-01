@@ -338,7 +338,7 @@ export default function GatherChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-full">
+    <div className="flex flex-col h-full w-full">
       {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b bg-white">
         <button
@@ -436,7 +436,7 @@ export default function GatherChatPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              placeholder="..."
+              placeholder={t('chat.inputPlaceholder')}
               className="flex-1 px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#9DB8A0] text-sm"
               disabled={sending}
             />

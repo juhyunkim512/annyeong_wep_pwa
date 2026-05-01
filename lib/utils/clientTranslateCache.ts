@@ -23,12 +23,23 @@ export function getClientTranslation(
   return _cache.get(`${contentId}:${fieldName}:${targetLang ?? ''}`) ?? null
 }
 
-/** `contentId:fieldName:targetLang` 키로 캐시 저장 */
+const MAX_CACHE_SIZE = 500
+
+/** `contentId:fieldName:targetLang` 키로 캐시 저장 (최대 500개, 초과 시 가장 오래된 항목 삭제) */
 export function setClientTranslation(
   contentId: string,
   fieldName: string,
   result: TranslationResult,
   targetLang?: string,
 ): void {
-  _cache.set(`${contentId}:${fieldName}:${targetLang ?? ''}`, result)
+  const key = `${contentId}:${fieldName}:${targetLang ?? ''}`
+  // 이미 존재하는 키면 삭제 후 재삽입(LRU 갱신)
+  if (_cache.has(key)) {
+    _cache.delete(key)
+  } else if (_cache.size >= MAX_CACHE_SIZE) {
+    // Map은 삽입 순서를 보장하므로 첫 번째 키가 가장 오래된 항목
+    const oldestKey = _cache.keys().next().value
+    if (oldestKey !== undefined) _cache.delete(oldestKey)
+  }
+  _cache.set(key, result)
 }

@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     }
 
     const admin = createAdminClient();
-    const { data, error } = await admin.auth.admin.listUsers();
+    const { data, error } = await admin.auth.admin.listUsers({ perPage: 1000 });
 
     if (error) {
       return NextResponse.json(

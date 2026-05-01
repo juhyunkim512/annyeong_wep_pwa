@@ -1,6 +1,20 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
+/**
+ * 서버측 이메일 마스킹
+ * 규칙: @ 앞부분은 첫 글자만 보이고 나머지는 ***, 도메인은 그대로
+ * 예: user@example.com → u***@example.com
+ */
+function maskEmailServer(email: string): string {
+  const atIdx = email.indexOf('@');
+  if (atIdx < 0) return email;
+  const local = email.slice(0, atIdx);
+  const domain = email.slice(atIdx + 1);
+  const maskedLocal = local.charAt(0) + '***';
+  return `${maskedLocal}@${domain}`;
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -51,8 +65,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. 원본 이메일 반환 (프론트에서 maskEmail() 처리)
-    return NextResponse.json({ email: userData.user.email }, { status: 200 });
+    // 3. 서버에서 마스킹 후 반환 (원본 이메일 노출 방지)
+    return NextResponse.json({ email: maskEmailServer(userData.user.email) }, { status: 200 });
   } catch (err) {
     console.error('[find-id] unexpected error:', err);
     return NextResponse.json(

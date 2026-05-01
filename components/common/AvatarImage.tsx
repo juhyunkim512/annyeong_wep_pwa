@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 interface AvatarImageProps {
   src?: string | null;
   size?: number; // px, default 40
@@ -12,13 +14,25 @@ export default function AvatarImage({ src, size = 40, className = '' }: AvatarIm
       className={`rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center bg-gray-100 ${className}`}
     >
       {src ? (
-        <img src={src} alt="avatar" className="w-full h-full object-cover" />
+        <div className="relative w-full h-full">
+          <Image
+            src={src}
+            alt="avatar"
+            fill
+            sizes={dim}
+            className="object-cover"
+          />
+        </div>
       ) : (
-        <img
-          src="/logo.png"
-          alt="default avatar"
-          className="w-full h-full object-contain p-[20%] grayscale opacity-50"
-        />
+        <div className="relative w-full h-full">
+          <Image
+            src="/logo.png"
+            alt="default avatar"
+            fill
+            sizes={dim}
+            className="object-contain p-[20%] grayscale opacity-50"
+          />
+        </div>
       )}
     </div>
   );
