@@ -16,10 +16,10 @@ function getDefaultLanguageFromCountry(country: string): string {
 
 export async function POST(req: Request) {
   try {
-    const { email, password, nickname, flag, purpose, current_status, gender } =
+    const { email, password, nickname, flag, gender } =
       await req.json();
 
-    if (!email || !password || !nickname || !flag || !purpose || !current_status) {
+    if (!email || !password || !nickname || !flag) {
       return NextResponse.json(
         { success: false, message: "All fields are required." },
         { status: 400 }
@@ -121,8 +121,6 @@ export async function POST(req: Request) {
       nickname,
       flag,
       uselanguage,
-      purpose,
-      current_status,
       ...(gender ? { gender } : {}),
     });
 
