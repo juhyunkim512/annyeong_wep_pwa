@@ -195,6 +195,7 @@
     "nicknamePlaceholder": "请输入昵称",
     "nicknameEmpty": "昵称不能为空。",
     "imageUploadFailed": "图片上传失败，请重试。",
+    "imageFileNameEnglishOnly": "图片文件名必须为英文。请将文件名改为英文后重试。",
     "saveFailed": "保存失败，请重试。",
     "savedSuccess": "保存成功！",
     "saveChanges": "保存更改",

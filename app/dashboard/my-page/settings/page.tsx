@@ -13,7 +13,7 @@ export default function SettingsPage() {
 
   // [수정] 언어 선택 항목 제거 — 유저가 변경 못하도록
   const SETTINGS_ITEMS = [
-    { icon: '/icons/camera.png', label: t('settings.editProfile'), desc: t('settings.editProfileDesc'), href: '/dashboard/my-page/settings/profile' },
+    { icon: '/icons/camera.png', label: t('settings.editProfile'), href: '/dashboard/my-page/settings/profile' },
   ];
 
   return (
@@ -32,7 +32,6 @@ export default function SettingsPage() {
                 <img src={item.icon} className="w-7 h-7 object-contain" />
                 <div>
                   <p className="font-semibold text-gray-900">{item.label}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
                 </div>
               </div>
               <span className="text-gray-400 text-lg">›</span>
@@ -47,7 +46,6 @@ export default function SettingsPage() {
             <img src="/icons/no.png" className="w-7 h-7 object-contain" />
             <div className="text-left">
               <p className="font-semibold text-gray-900">{t('settings.deleteAccount')}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{t('settings.deleteAccountDesc')}</p>
             </div>
           </div>
           <span className="text-gray-400 text-lg">›</span>

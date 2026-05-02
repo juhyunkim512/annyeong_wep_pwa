@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import AvatarImage from '@/components/common/AvatarImage';
 import { useTranslation } from 'react-i18next';
 import '@/lib/i18n';
+import { Trash2 } from 'lucide-react';
 
 const NICKNAME_REGEX = /^[a-z0-9_]{3,15}$/;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
@@ -22,6 +23,7 @@ export default function ProfileSettingsPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(false);
   const [msg, setMsg] = useState('');
   const [isError, setIsError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -63,6 +65,11 @@ export default function ProfileSettingsPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     if (!file) return;
+    if (/[^\x00-\x7F]/.test(file.name)) {
+      showMsg(t('settings.imageFileNameEnglishOnly'), true);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
     if (!ALLOWED_TYPES.includes(file.type) && !file.name.match(/\.(heic|heif)$/i)) {
       showMsg('Unsupported image format', true);
       return;
@@ -71,6 +78,7 @@ export default function ProfileSettingsPage() {
       showMsg('Image must be under 10MB', true);
       return;
     }
+    setPendingDelete(false);
     setAvatarFile(file);
     setPreviewUrl(URL.createObjectURL(file));
   };
@@ -90,6 +98,13 @@ export default function ProfileSettingsPage() {
     const { data: urlData } = supabase.storage.from('profile-images').getPublicUrl(filePath);
     return urlData.publicUrl;
   }, []);
+
+  const handleDeletePhoto = () => {
+    setPendingDelete(true);
+    setPreviewUrl(null);
+    setAvatarFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   // ── 폼 제출: validation → 팝업 또는 이미지만 저장 ─────────
   const handleSave = async (e: React.FormEvent) => {
@@ -117,20 +132,30 @@ export default function ProfileSettingsPage() {
     }
 
     // 닉네임 동일 → 이미지만 저장
-    if (!avatarFile) {
+    if (!avatarFile && !pendingDelete) {
       showMsg(t('settings.savedSuccess'));
       return;
     }
 
     setSaving(true);
     try {
-      const newImageUrl = await saveImage(userId, savedImageUrl, avatarFile);
+      let newImageUrl: string | null = savedImageUrl;
+      if (pendingDelete) {
+        if (savedImageUrl) {
+          const match = savedImageUrl.match(/profile-images\/(.+)$/);
+          if (match) await supabase.storage.from('profile-images').remove([match[1]]);
+        }
+        newImageUrl = null;
+      } else if (avatarFile) {
+        newImageUrl = await saveImage(userId, savedImageUrl, avatarFile);
+      }
       const { error: updateErr } = await supabase
         .from('profile')
         .update({ image_url: newImageUrl })
         .eq('id', userId);
       if (updateErr) throw new Error('updateFailed');
       setSavedImageUrl(newImageUrl);
+      setPendingDelete(false);
       setAvatarFile(null);
       setPreviewUrl(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -190,15 +215,25 @@ export default function ProfileSettingsPage() {
       setSavedNickname(trimmed);
 
       // 이미지도 변경됐으면 이어서 저장
-      if (avatarFile) {
+      if (pendingDelete || avatarFile) {
         try {
-          const newImageUrl = await saveImage(userId, savedImageUrl, avatarFile);
+          let newImageUrl: string | null = savedImageUrl;
+          if (pendingDelete) {
+            if (savedImageUrl) {
+              const match = savedImageUrl.match(/profile-images\/(.+)$/);
+              if (match) await supabase.storage.from('profile-images').remove([match[1]]);
+            }
+            newImageUrl = null;
+          } else if (avatarFile) {
+            newImageUrl = await saveImage(userId, savedImageUrl, avatarFile);
+          }
           const { error: imgErr } = await supabase
             .from('profile')
             .update({ image_url: newImageUrl })
             .eq('id', userId);
           if (!imgErr) {
             setSavedImageUrl(newImageUrl);
+            setPendingDelete(false);
             setAvatarFile(null);
             setPreviewUrl(null);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -215,7 +250,7 @@ export default function ProfileSettingsPage() {
     }
   };
 
-  const displayImage = previewUrl ?? savedImageUrl;
+  const displayImage = pendingDelete ? null : (previewUrl ?? savedImageUrl);
 
   if (loading) {
     return (
@@ -252,8 +287,15 @@ export default function ProfileSettingsPage() {
                 {t('settings.choosePhoto')}
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
               </label>
-              {previewUrl && (
-                <span className="text-xs text-[#9DB8A0] font-medium"></span>
+              {!pendingDelete && (savedImageUrl || previewUrl) && (
+                <button
+                  type="button"
+                  onClick={handleDeletePhoto}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-red-500 bg-red-50 hover:bg-red-100 disabled:opacity-50 transition"
+                >
+                  <Trash2 size={15} />
+                </button>
               )}
             </div>
           </div>

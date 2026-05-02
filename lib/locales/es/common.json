@@ -195,6 +195,7 @@
     "nicknamePlaceholder": "Tu apodo",
     "nicknameEmpty": "El apodo no puede estar vacío.",
     "imageUploadFailed": "Error al subir la imagen. Inténtalo de nuevo.",
+    "imageFileNameEnglishOnly": "El nombre del archivo de imagen debe estar en inglés. Renombra el archivo en inglés e inténtalo de nuevo.",
     "saveFailed": "Error al guardar. Inténtalo de nuevo.",
     "savedSuccess": "¡Guardado exitosamente!",
     "saveChanges": "Guardar cambios",

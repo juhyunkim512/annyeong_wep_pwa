@@ -9,6 +9,7 @@ import UserProfileModal from "@/components/common/UserProfileModal";
 import ReportModal from "@/components/common/ReportModal";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
+import { ArrowLeft } from "lucide-react";
 import { normalizeLang } from "@/lib/utils/normalizeLang";
 import { batchTranslate } from "@/lib/utils/batchTranslate";
 
@@ -456,6 +457,12 @@ export default function PostDetailPage() {
   if (!loading && !isLoggedIn) {
     return (
       <div className="max-w-2xl mx-auto mt-12">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1 text-gray-500 hover:text-gray-800 mb-4 transition"
+        >
+          <ArrowLeft size={20} />
+        </button>
         <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
           <h2 className="text-2xl font-bold mb-4">{t('auth.loginRequiredDesc')}</h2>
           <button
@@ -472,6 +479,12 @@ export default function PostDetailPage() {
 
   return (
     <div className="max-w-2xl mx-auto mt-12">
+      <button
+        onClick={() => router.back()}
+        className="flex items-center gap-1 text-gray-500 hover:text-gray-800 mb-4 transition"
+      >
+        <ArrowLeft size={20} />
+      </button>
       {loading ? (
         <div className="text-center py-8 text-gray-400">{t('common.loading')}</div>
       ) : error ? (

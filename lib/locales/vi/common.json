@@ -195,6 +195,7 @@
     "nicknamePlaceholder": "Biệt danh của bạn",
     "nicknameEmpty": "Biệt danh không được để trống.",
     "imageUploadFailed": "Tải ảnh thất bại. Vui lòng thử lại.",
+    "imageFileNameEnglishOnly": "Tên file ảnh phải bằng tiếng Anh. Vui lòng đổi tên file sang tiếng Anh rồi thử lại.",
     "saveFailed": "Lưu thất bại. Vui lòng thử lại.",
     "savedSuccess": "Đã lưu thành công!",
     "saveChanges": "Lưu thay đổi",

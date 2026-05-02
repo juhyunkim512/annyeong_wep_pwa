@@ -196,6 +196,7 @@
     "nicknamePlaceholder": "Your nickname",
     "nicknameEmpty": "Nickname cannot be empty.",
     "imageUploadFailed": "Image upload failed. Please try again.",
+    "imageFileNameEnglishOnly": "Image file name must be in English. Please rename the file and try again.",
     "saveFailed": "Failed to save. Please try again.",
     "savedSuccess": "Saved successfully!",
     "saveChanges": "Save Changes",

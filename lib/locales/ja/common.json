@@ -195,6 +195,7 @@
     "nicknamePlaceholder": "ニックネームを入力してください",
     "nicknameEmpty": "ニックネームは必須です。",
     "imageUploadFailed": "画像のアップロードに失敗しました。もう一度お試しください。",
+    "imageFileNameEnglishOnly": "画像のファイル名は英語にしてください。ファイル名を英語に変えてから再度お試しください。",
     "saveFailed": "保存に失敗しました。もう一度お試しください。",
     "savedSuccess": "保存しました！",
     "saveChanges": "変更を保存",
